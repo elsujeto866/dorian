@@ -4,3 +4,4 @@ export { default as ProjectCard } from "./ProjectCard";
 export { default as CategorySection } from "./CategorySection";
 export { default as FullProfile } from "./FullProfile";
 export { default as WhatsAppCTA, buildWhatsAppHref, buildProjectWhatsAppHref } from "./WhatsAppCTA";
+export { HudOverlay } from "./HudOverlay";
