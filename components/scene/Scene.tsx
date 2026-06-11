@@ -25,7 +25,7 @@
  * Design ref: sections 3 and 4 (scene graph, asset pipeline).
  */
 
-import { Suspense, useCallback, useEffect, useRef } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, PerformanceMonitor, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
@@ -37,7 +37,19 @@ import { HOME_WAYPOINT } from "./waypoint";
 // ─── Canvas DPR constants ─────────────────────────────────────────────────────
 
 const DPR_RANGE: [number, number] = [1, 2];
-const DPR_FALLBACK: [number, number] = [1, 1.5];
+
+/**
+ * Map a PerformanceMonitor factor (0–1) to a concrete DPR value.
+ *
+ * factor=1  → full quality (max DPR 2)
+ * factor=0  → minimum quality (DPR 1)
+ *
+ * Exported so it can be unit-tested independently of React.
+ */
+export function dprFromFactor(factor: number): number {
+  // Round to one decimal to avoid micro-updates; clamp to [1, 2].
+  return Math.max(1, Math.min(2, Math.round((1 + factor) * 10) / 10));
+}
 
 // ─── Loader fallback ──────────────────────────────────────────────────────────
 
@@ -104,16 +116,11 @@ function CityGlow() {
 // ─── Scene internals (inside Canvas) ─────────────────────────────────────────
 
 interface SceneInternalsProps {
-  dprRange: [number, number];
   onDprChange: (dpr: number) => void;
 }
 
-function SceneInternals({ dprRange, onDprChange }: SceneInternalsProps) {
+function SceneInternals({ onDprChange }: SceneInternalsProps) {
   const { setPhase } = useSceneStore();
-
-  const handleDprDecline = useCallback(() => {
-    onDprChange(dprRange[0]); // Drop to min DPR on decline.
-  }, [dprRange, onDprChange]);
 
   // Set overview phase once scene mounts.
   useEffect(() => {
@@ -122,9 +129,10 @@ function SceneInternals({ dprRange, onDprChange }: SceneInternalsProps) {
 
   return (
     <>
-      {/* Adaptive performance monitor */}
+      {/* Adaptive performance monitor — drives Canvas dpr via React state. */}
       <PerformanceMonitor
-        onDecline={handleDprDecline}
+        onDecline={({ factor }) => onDprChange(dprFromFactor(factor))}
+        onIncline={({ factor }) => onDprChange(dprFromFactor(factor))}
         onFallback={() => onDprChange(1)}
       />
 
@@ -175,10 +183,11 @@ function SceneInternals({ dprRange, onDprChange }: SceneInternalsProps) {
 // ─── Scene root ───────────────────────────────────────────────────────────────
 
 export default function Scene() {
-  const dprRef = useRef<[number, number]>(DPR_RANGE);
+  // dpr is React state so Canvas re-renders whenever PerformanceMonitor adjusts it.
+  const [dpr, setDpr] = useState<[number, number] | number>(DPR_RANGE);
 
-  const handleDprChange = useCallback((dpr: number) => {
-    dprRef.current = [dpr, dpr];
+  const handleDprChange = useCallback((value: number) => {
+    setDpr(value);
   }, []);
 
   return (
@@ -200,13 +209,10 @@ export default function Scene() {
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.2,
       }}
-      dpr={DPR_RANGE}
+      dpr={dpr}
       shadows={false}
     >
-      <SceneInternals
-        dprRange={dprRef.current ?? DPR_FALLBACK}
-        onDprChange={handleDprChange}
-      />
+      <SceneInternals onDprChange={handleDprChange} />
     </Canvas>
   );
 }
