@@ -1,0 +1,20 @@
+[
+  {
+    "id": "automatizacion",
+    "label": "Automatización de procesos",
+    "districtColor": "#0ea5e9",
+    "order": 1
+  },
+  {
+    "id": "gestion-empresarial",
+    "label": "Gestión empresarial",
+    "districtColor": "#22c55e",
+    "order": 2
+  },
+  {
+    "id": "deportes-entretenimiento",
+    "label": "Deportes y entretenimiento",
+    "districtColor": "#f59e0b",
+    "order": 3
+  }
+]

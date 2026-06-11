@@ -1,0 +1,135 @@
+[
+  {
+    "id": "emision-polizas",
+    "name": "Sistema de emisión de pólizas",
+    "categoryId": "automatizacion",
+    "sector": "Seguros",
+    "summary": "Automatización del proceso de emisión de pólizas para una aseguradora regional, eliminando pasos manuales y reduciendo errores de captura.",
+    "roi": {
+      "kind": "saved",
+      "amountUsd": 48000,
+      "period": "año",
+      "metric": "90% menos tiempo de emisión"
+    },
+    "featured": true,
+    "building": {
+      "model": "office-tower-a.glb",
+      "districtSlot": 0
+    },
+    "waMessage": "Hola, me interesa automatizar el proceso de emisión de documentos en mi empresa."
+  },
+  {
+    "id": "control-inventario",
+    "name": "Control de inventario en tiempo real",
+    "categoryId": "gestion-empresarial",
+    "sector": "Retail",
+    "summary": "App web para gestión de inventario con alertas automáticas de stock bajo y reportes en tiempo real para una cadena de tiendas.",
+    "roi": {
+      "kind": "saved",
+      "amountUsd": 36000,
+      "period": "año",
+      "metric": "70% reducción en pérdidas por desabastecimiento"
+    },
+    "featured": true,
+    "building": {
+      "model": "warehouse-a.glb",
+      "districtSlot": 0
+    },
+    "waMessage": null
+  },
+  {
+    "id": "gestion-club-futbol",
+    "name": "Plataforma de gestión para club de fútbol",
+    "categoryId": "deportes-entretenimiento",
+    "sector": "Fútbol",
+    "summary": "Sistema integral para administración de socios, pagos, reservas de canchas y estadísticas de jugadores para un club deportivo.",
+    "roi": {
+      "kind": "earned",
+      "amountUsd": 28000,
+      "period": "año",
+      "metric": "40% más ingresos por suscripciones"
+    },
+    "featured": true,
+    "building": {
+      "model": "stadium-mini.glb",
+      "districtSlot": 0
+    },
+    "waMessage": "Hola, tengo un club deportivo y necesito una plataforma de gestión."
+  },
+  {
+    "id": "facturacion-electronica",
+    "name": "Módulo de facturación electrónica",
+    "categoryId": "automatizacion",
+    "sector": "Contabilidad",
+    "summary": "Integración con el SRI para emisión automática de facturas electrónicas, reduciendo carga operativa del equipo contable.",
+    "roi": {
+      "kind": "saved",
+      "amountUsd": 22000,
+      "period": "año",
+      "metric": "60% menos tiempo en facturación"
+    },
+    "featured": true,
+    "building": {
+      "model": "office-tower-b.glb",
+      "districtSlot": 1
+    },
+    "waMessage": null
+  },
+  {
+    "id": "plataforma-certificaciones",
+    "name": "Plataforma de certificaciones industriales",
+    "categoryId": "automatizacion",
+    "sector": "Certificación industrial",
+    "summary": "Sistema de seguimiento y renovación de certificaciones técnicas para operarios de una empresa industrial, con recordatorios automáticos.",
+    "roi": {
+      "kind": "saved",
+      "amountUsd": 18500,
+      "period": "año",
+      "metric": "50% menos multas por vencimiento"
+    },
+    "featured": true,
+    "building": {
+      "model": "factory-a.glb",
+      "districtSlot": 2
+    },
+    "waMessage": "Hola, necesito un sistema para gestionar las certificaciones de mi empresa."
+  },
+  {
+    "id": "crm-pymes",
+    "name": "CRM personalizado para PYMES",
+    "categoryId": "gestion-empresarial",
+    "sector": "Ventas",
+    "summary": "CRM ligero desarrollado a medida para el seguimiento de clientes y pipeline de ventas de una empresa de servicios.",
+    "roi": {
+      "kind": "earned",
+      "amountUsd": 14000,
+      "period": "año",
+      "metric": "25% más conversiones"
+    },
+    "featured": false,
+    "building": {
+      "model": "office-small.glb",
+      "districtSlot": 1
+    },
+    "waMessage": null
+  },
+  {
+    "id": "app-reservas-cancha",
+    "name": "App de reservas de canchas deportivas",
+    "categoryId": "deportes-entretenimiento",
+    "sector": "Deportes",
+    "summary": "Aplicación móvil y web para reservar canchas sintéticas con pagos en línea y gestión de horarios para un complejo deportivo.",
+    "roi": {
+      "kind": "earned",
+      "amountUsd": 12000,
+      "period": "año",
+      "metric": "35% más reservas por canal digital"
+    },
+    "featured": false,
+    "building": {
+      "model": "sports-complex.glb",
+      "districtSlot": 1
+    },
+    "waMessage": "Hola, tengo un complejo deportivo y quiero una app de reservas."
+  }
+]
