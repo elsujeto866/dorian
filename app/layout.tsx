@@ -26,6 +26,8 @@ export const metadata: Metadata = {
   },
 };
 
+const waNumber = process.env.NEXT_PUBLIC_WA_NUMBER;
+
 const personJsonLd = {
   "@context": "https://schema.org",
   "@type": "Person",
@@ -33,9 +35,7 @@ const personJsonLd = {
   jobTitle: "Ingeniero de software",
   url: "https://dorian.dev",
   areaServed: "Ecuador",
-  sameAs: [
-    `https://wa.me/${process.env.NEXT_PUBLIC_WA_NUMBER ?? ""}`,
-  ],
+  ...(waNumber ? { sameAs: [`https://wa.me/${waNumber}`] } : {}),
 };
 
 export default function RootLayout({

@@ -34,7 +34,7 @@ export default function ProjectCard({ project, category }: ProjectCardProps) {
         <p className="text-sm text-slate-700 leading-relaxed">{project.summary}</p>
       </div>
 
-      {/* ROI metric chip */}
+      {/* ROI metric chip + tags */}
       <div className="flex flex-wrap items-center gap-2">
         <span
           className="inline-block bg-sky-50 text-sky-700 border border-sky-200 rounded-full px-3 py-1 text-xs font-semibold"
@@ -42,6 +42,14 @@ export default function ProjectCard({ project, category }: ProjectCardProps) {
         >
           {roiLabel}
         </span>
+        {project.tags?.map((tag) => (
+          <span
+            key={tag}
+            className="inline-block bg-slate-100 text-slate-600 rounded-full px-2.5 py-0.5 text-xs"
+          >
+            {tag}
+          </span>
+        ))}
       </div>
 
       {/* Per-project WhatsApp link */}

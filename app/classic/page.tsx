@@ -99,7 +99,7 @@ export default function ClassicPage() {
               ¿Listo para hablar de tu proyecto?
             </h2>
             <p className="text-slate-500 mb-8 text-sm">
-              Sin formularios. Sin esperas. Escribime directamente.
+              Sin formularios. Sin esperas. Escríbeme directamente.
             </p>
             <WhatsAppCTA />
           </div>

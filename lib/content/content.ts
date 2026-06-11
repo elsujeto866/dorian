@@ -60,28 +60,51 @@ for (const project of projects) {
 }
 
 // ---------------------------------------------------------------------------
+// Build invariant: at least 1 project must qualify for Top 5 (spec 1.3)
+// A project qualifies if featured === true OR a rank is assigned.
+// ---------------------------------------------------------------------------
+
+const qualifiedCount = projects.filter(
+  (p) => p.featured === true || typeof p.rank === "number"
+).length;
+
+if (qualifiedCount < 1) {
+  throw new Error(
+    "[content] Build invariant failed: at least 1 project must have featured:true or a rank value to populate the Top 5 section. Set featured:true on one or more projects in projects.json."
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Derived data functions
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the top 5 projects sorted by roi.amountUsd DESC.
- * Tiebreaker: featured=true projects rank before featured=false,
- * then alphabetical by name for full determinism.
+ * Returns the top 5 projects using two-tier ordering (spec S-C6 / S-P7):
+ *  Tier 1 — projects with an explicit `rank` value, sorted by rank ASC.
+ *  Tier 2 — remaining projects (rank is undefined) sorted by roi.amountUsd DESC.
+ *            Tiebreaker within tier 2: featured=true first, then name alpha.
+ * At most 5 projects are returned total, filling ranked slots first.
  */
 export function getTop5(projectList: Project[] = projects): Project[] {
-  const sorted = [...projectList].sort((a, b) => {
-    // Primary: roi.amountUsd DESC
-    const roiDiff = b.roi.amountUsd - a.roi.amountUsd;
-    if (roiDiff !== 0) return roiDiff;
-    // Tiebreaker 1: featured=true first
-    const aFeatured = a.featured === true ? 0 : 1;
-    const bFeatured = b.featured === true ? 0 : 1;
-    if (aFeatured !== bFeatured) return aFeatured - bFeatured;
-    // Tiebreaker 2: alphabetical by name (deterministic)
-    return a.name.localeCompare(b.name);
-  });
+  const ranked = [...projectList]
+    .filter((p) => typeof p.rank === "number")
+    .sort((a, b) => (a.rank as number) - (b.rank as number));
 
-  return sorted.slice(0, 5);
+  const unranked = [...projectList]
+    .filter((p) => typeof p.rank !== "number")
+    .sort((a, b) => {
+      // Primary: roi.amountUsd DESC
+      const roiDiff = b.roi.amountUsd - a.roi.amountUsd;
+      if (roiDiff !== 0) return roiDiff;
+      // Tiebreaker 1: featured=true first
+      const aFeatured = a.featured === true ? 0 : 1;
+      const bFeatured = b.featured === true ? 0 : 1;
+      if (aFeatured !== bFeatured) return aFeatured - bFeatured;
+      // Tiebreaker 2: alphabetical by name (deterministic)
+      return a.name.localeCompare(b.name);
+    });
+
+  return [...ranked, ...unranked].slice(0, 5);
 }
 
 /**

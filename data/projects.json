@@ -12,6 +12,8 @@
       "metric": "90% menos tiempo de emisión"
     },
     "featured": true,
+    "rank": 1,
+    "tags": ["automatización", "seguros", "documentos"],
     "building": {
       "model": "office-tower-a.glb",
       "districtSlot": 0
@@ -31,6 +33,8 @@
       "metric": "70% reducción en pérdidas por desabastecimiento"
     },
     "featured": true,
+    "rank": 2,
+    "tags": ["inventario", "retail", "alertas", "reportes"],
     "building": {
       "model": "warehouse-a.glb",
       "districtSlot": 0
@@ -50,6 +54,7 @@
       "metric": "40% más ingresos por suscripciones"
     },
     "featured": true,
+    "tags": ["deportes", "suscripciones", "pagos en línea"],
     "building": {
       "model": "stadium-mini.glb",
       "districtSlot": 0
@@ -69,6 +74,7 @@
       "metric": "60% menos tiempo en facturación"
     },
     "featured": true,
+    "tags": ["SRI", "facturación electrónica", "contabilidad"],
     "building": {
       "model": "office-tower-b.glb",
       "districtSlot": 1
@@ -88,6 +94,7 @@
       "metric": "50% menos multas por vencimiento"
     },
     "featured": true,
+    "tags": ["certificaciones", "industria", "recordatorios"],
     "building": {
       "model": "factory-a.glb",
       "districtSlot": 2
@@ -107,6 +114,7 @@
       "metric": "25% más conversiones"
     },
     "featured": false,
+    "tags": ["CRM", "ventas", "pipeline"],
     "building": {
       "model": "office-small.glb",
       "districtSlot": 1
@@ -126,6 +134,7 @@
       "metric": "35% más reservas por canal digital"
     },
     "featured": false,
+    "tags": ["reservas", "deportes", "pagos en línea", "móvil"],
     "building": {
       "model": "sports-complex.glb",
       "districtSlot": 1

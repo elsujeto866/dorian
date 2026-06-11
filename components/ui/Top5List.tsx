@@ -65,6 +65,18 @@ export default function Top5List({ projects }: Top5ListProps) {
                   >
                     {roiLabel}
                   </p>
+                  {project.tags && project.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {project.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-block bg-slate-100 text-slate-600 rounded-full px-2.5 py-0.5 text-xs"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </li>
             );

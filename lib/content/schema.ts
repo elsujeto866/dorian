@@ -61,6 +61,12 @@ export const ProjectSchema = z.object({
   summary: z.string().min(1, { message: "summary must not be empty" }),
   roi: RoiSchema,
   featured: z.boolean().optional(),
+  rank: z
+    .number()
+    .int()
+    .positive({ message: "rank must be a positive integer" })
+    .optional(),
+  tags: z.array(z.string()).optional(),
   building: BuildingHintSchema,
   waMessage: z.string().nullable().optional(),
 });

@@ -99,6 +99,31 @@ describe("ProjectSchema", () => {
     expect(result.success).toBe(true);
     void minimal;
   });
+
+  it("accepts a project with a valid rank (positive integer)", () => {
+    const result = ProjectSchema.safeParse(makeProject({ rank: 1 }));
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a project with rank = 0 (must be positive)", () => {
+    const result = ProjectSchema.safeParse(makeProject({ rank: 0 }));
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a project with a non-integer rank", () => {
+    const result = ProjectSchema.safeParse(makeProject({ rank: 1.5 }));
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a project with tags as string array", () => {
+    const result = ProjectSchema.safeParse(makeProject({ tags: ["automatización", "SRI"] }));
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a project with empty tags array", () => {
+    const result = ProjectSchema.safeParse(makeProject({ tags: [] }));
+    expect(result.success).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -109,10 +134,15 @@ describe("getTop5", () => {
   // We test the pure function by importing it with isolated fixtures.
   // To avoid coupling to the real data files, we test the sorting logic
   // directly by constructing projects and calling a local sort helper
-  // that mirrors the content.ts implementation.
+  // that mirrors the content.ts implementation (two-tier: rank ASC, then ROI DESC).
 
   function sortTop5(projectList: Project[]): Project[] {
-    return [...projectList]
+    const ranked = [...projectList]
+      .filter((p) => typeof p.rank === "number")
+      .sort((a, b) => (a.rank as number) - (b.rank as number));
+
+    const unranked = [...projectList]
+      .filter((p) => typeof p.rank !== "number")
       .sort((a, b) => {
         const roiDiff = b.roi.amountUsd - a.roi.amountUsd;
         if (roiDiff !== 0) return roiDiff;
@@ -120,8 +150,9 @@ describe("getTop5", () => {
         const bFeatured = b.featured === true ? 0 : 1;
         if (aFeatured !== bFeatured) return aFeatured - bFeatured;
         return a.name.localeCompare(b.name);
-      })
-      .slice(0, 5);
+      });
+
+    return [...ranked, ...unranked].slice(0, 5);
   }
 
   it("returns at most 5 projects", () => {
@@ -136,34 +167,73 @@ describe("getTop5", () => {
     expect(sortTop5(few)).toHaveLength(1);
   });
 
-  it("sorts by roi.amountUsd DESC (S-P7 rank-then-ROI order)", () => {
-    const projects = [
+  it("sorts by roi.amountUsd DESC when no ranks assigned (S-P7 baseline)", () => {
+    const projectList = [
       makeProject({ id: "low", roi: { kind: "saved", amountUsd: 1000 } }),
       makeProject({ id: "high", roi: { kind: "earned", amountUsd: 50000 } }),
       makeProject({ id: "mid", roi: { kind: "saved", amountUsd: 20000 } }),
     ];
-    const result = sortTop5(projects);
+    const result = sortTop5(projectList);
     expect(result[0].id).toBe("high");
     expect(result[1].id).toBe("mid");
     expect(result[2].id).toBe("low");
   });
 
-  it("tie-break is deterministic: featured=true before featured=false", () => {
-    const projects = [
+  it("rank override: ranked projects come before unranked regardless of ROI (S-C6)", () => {
+    // rank=1 project has lower ROI than an unranked project — rank must win
+    const projectList = [
+      makeProject({ id: "unranked-high-roi", roi: { kind: "saved", amountUsd: 99000 } }),
+      makeProject({ id: "ranked-low-roi", roi: { kind: "saved", amountUsd: 1000 }, rank: 1 }),
+    ];
+    const result = sortTop5(projectList);
+    expect(result[0].id).toBe("ranked-low-roi");
+    expect(result[1].id).toBe("unranked-high-roi");
+  });
+
+  it("partial ranks: ranked slots fill first, then ROI fills remaining slots (S-C6)", () => {
+    const projectList = [
+      makeProject({ id: "no-rank-high", roi: { kind: "saved", amountUsd: 50000 } }),
+      makeProject({ id: "rank-2", roi: { kind: "saved", amountUsd: 5000 }, rank: 2 }),
+      makeProject({ id: "no-rank-low", roi: { kind: "saved", amountUsd: 1000 } }),
+      makeProject({ id: "rank-1", roi: { kind: "saved", amountUsd: 2000 }, rank: 1 }),
+    ];
+    const result = sortTop5(projectList);
+    // Ranked first: rank-1, rank-2
+    expect(result[0].id).toBe("rank-1");
+    expect(result[1].id).toBe("rank-2");
+    // Unranked fill by ROI DESC
+    expect(result[2].id).toBe("no-rank-high");
+    expect(result[3].id).toBe("no-rank-low");
+  });
+
+  it("no ranks assigned: pure ROI ordering still applies (backward compat)", () => {
+    const projectList = [
+      makeProject({ id: "b", roi: { kind: "saved", amountUsd: 30000 } }),
+      makeProject({ id: "a", roi: { kind: "saved", amountUsd: 45000 } }),
+      makeProject({ id: "c", roi: { kind: "saved", amountUsd: 15000 } }),
+    ];
+    const result = sortTop5(projectList);
+    expect(result[0].id).toBe("a");
+    expect(result[1].id).toBe("b");
+    expect(result[2].id).toBe("c");
+  });
+
+  it("tie-break is deterministic: featured=true before featured=false (within unranked)", () => {
+    const projectList = [
       makeProject({ id: "unfeatured", roi: { kind: "saved", amountUsd: 10000 }, featured: false }),
       makeProject({ id: "featured", roi: { kind: "earned", amountUsd: 10000 }, featured: true }),
     ];
-    const result = sortTop5(projects);
+    const result = sortTop5(projectList);
     expect(result[0].id).toBe("featured");
     expect(result[1].id).toBe("unfeatured");
   });
 
   it("tie-break is deterministic: alphabetical by name when ROI and featured are equal", () => {
-    const projects = [
+    const projectList = [
       makeProject({ id: "b-project", name: "Zeta", roi: { kind: "saved", amountUsd: 10000 }, featured: true }),
       makeProject({ id: "a-project", name: "Alpha", roi: { kind: "earned", amountUsd: 10000 }, featured: true }),
     ];
-    const result = sortTop5(projects);
+    const result = sortTop5(projectList);
     expect(result[0].id).toBe("a-project");
     expect(result[1].id).toBe("b-project");
   });
@@ -281,5 +351,17 @@ describe("real data files (S-C1)", () => {
     for (const p of projs) {
       expect(catIds.has(p.categoryId), `Project "${p.id}" has unknown categoryId "${p.categoryId}"`).toBe(true);
     }
+  });
+
+  it("at least 1 project qualifies for Top 5 (spec 1.3 min-featured invariant)", async () => {
+    const projectsRaw = await import("@/data/projects.json");
+    const projs = ProjectsSchema.parse(projectsRaw.default);
+    const qualifiedCount = projs.filter(
+      (p) => p.featured === true || typeof p.rank === "number"
+    ).length;
+    expect(
+      qualifiedCount,
+      "projects.json must have at least 1 project with featured:true or a rank value"
+    ).toBeGreaterThanOrEqual(1);
   });
 });
