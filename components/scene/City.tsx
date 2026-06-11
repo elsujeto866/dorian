@@ -12,8 +12,8 @@
  *     (core spec guarantee — the layout is 100% data-driven).
  *
  * Landmarks (non-interactive, decorative):
- *   - Mayor statue: monumental seated LEGO-minifig Dorian in the central plaza
- *     (Lincoln Memorial pose, "EL ALCALDE" inscription). Clicking opens full
+ *   - Developer statue: monumental seated LEGO-minifig Dorian in the central plaza
+ *     (Lincoln Memorial pose, "EL DESARROLLADOR" inscription). Clicking opens full
  *     profile in the HUD.
  *   - Mitad del Mundo: futuristic stepped-pyramid + globe, emissive equator laser.
  *   - Quito colonial cluster: neon-signed church tower silhouettes.
@@ -75,7 +75,7 @@ function StreetGrid() {
 // ─── Mayor statue (central plaza) ────────────────────────────────────────────
 
 /**
- * LEGO-minifig mayor seated in Lincoln Memorial pose.
+ * LEGO-minifig developer seated in Lincoln Memorial pose.
  * Blocky proportions: cylindrical head, box torso, cylindrical hands.
  * Non-realistic — blocky/toy aesthetic.
  */
@@ -103,9 +103,9 @@ function MayorStatue() {
         <meshStandardMaterial color={marbleColor} emissive={marbleEmissive} emissiveIntensity={0.3} roughness={0.3} metalness={0.5} />
       </mesh>
 
-      {/* "EL ALCALDE" inscription (emissive neon cyan panel) */}
+      {/* "EL DESARROLLADOR" inscription (emissive neon cyan panel) */}
       <mesh position={[0, 0.4, 1.52]}>
-        <boxGeometry args={[3.2, 0.4, 0.05]} />
+        <boxGeometry args={[4.2, 0.4, 0.05]} />
         <meshStandardMaterial color="#003333" emissive="#00ffee" emissiveIntensity={1.5} roughness={0.1} />
       </mesh>
 

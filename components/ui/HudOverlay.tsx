@@ -120,7 +120,7 @@ function MayorPanel({ onClose }: MayorPanelProps) {
   return (
     <div
       role="dialog"
-      aria-label="Perfil: Dorian — El Alcalde"
+      aria-label="Perfil: Dorian — El Desarrollador"
       aria-modal="false"
       className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-md pointer-events-auto z-10"
     >
@@ -128,7 +128,7 @@ function MayorPanel({ onClose }: MayorPanelProps) {
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <h2 className="text-white font-bold text-lg leading-tight">Dorian</h2>
-            <p className="text-cyan-400 text-sm font-medium">Ingeniero de Software · El Alcalde</p>
+            <p className="text-cyan-400 text-sm font-medium">Ingeniero de Software · El Desarrollador</p>
           </div>
           <button
             type="button"
@@ -219,7 +219,7 @@ function BuildingNavList({ projects, selectedId, onSelect }: NavListProps) {
               }
             `}
           >
-            El Alcalde (Dorian)
+            El Desarrollador (Dorian)
           </button>
         </li>
       </ul>
