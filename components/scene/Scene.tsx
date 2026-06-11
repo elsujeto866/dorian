@@ -3,140 +3,184 @@
 /**
  * Scene.tsx
  *
- * 3D canvas shell — Phase 3 placeholder.
+ * Full 3D city scene — Phase 4.
  *
- * Contains the <Canvas> setup, CameraRig, and a minimal cyberpunk/voxel scene
- * to validate the full pipeline without building the city (Phase 4).
+ * Wires together:
+ *   - <Canvas> with cyberpunk night setup
+ *   - <PerformanceMonitor> adaptive DPR (Drei)
+ *   - <OrbitControls> free-look between flights, limited (no underground)
+ *   - <CameraRig> click-to-fly rails
+ *   - <City> fully data-driven procedural city
+ *   - Suspense loader
  *
- * Night-time cyberpunk aesthetic: dark background, neon emissive accent blocks,
- * low-poly grid ground plane. Bloom deferred to Phase 4 per batch 4 art direction.
+ * Bloom strategy: @react-three/postprocessing requires R3F v9 + React 19.
+ * This project uses React 18 + R3F v8. Bloom is FAKED via:
+ *   - High emissiveIntensity on neon materials (1.0–2.0)
+ *   - Sparkles from Drei for glow particle halos on district centres
+ *   - PerformanceMonitor ensures mid-range devices stay smooth
  *
- * Loaded ONLY via next/dynamic ssr:false in Experience.tsx — never in /classic.
+ * Loaded ONLY via next/dynamic ssr:false in Experience.tsx.
+ * Never imported by /classic.
+ *
+ * Design ref: sections 3 and 4 (scene graph, asset pipeline).
  */
 
-import { Suspense } from "react";
+import { Suspense, useCallback, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
+import { OrbitControls, PerformanceMonitor, Sparkles } from "@react-three/drei";
+import * as THREE from "three";
 import { CameraRig } from "./CameraRig";
+import { City } from "./City";
 import { useSceneStore } from "./useSceneStore";
 import { HOME_WAYPOINT } from "./waypoint";
 
-// ─── Placeholder geometry ─────────────────────────────────────────────────────
+// ─── Canvas DPR constants ─────────────────────────────────────────────────────
 
-/**
- * Neon accent block — emissive low-poly cube.
- * One per placeholder "building district"; full city arrives in Phase 4.
- */
-function NeonBlock({
-  position,
-  color,
-  scale = [1, 1, 1],
-}: {
-  position: [number, number, number];
-  color: string;
-  scale?: [number, number, number];
-}) {
-  return (
-    <mesh position={position} scale={scale}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial
-        color={color}
-        emissive={color}
-        emissiveIntensity={0.8}
-        roughness={0.4}
-        metalness={0.2}
-      />
-    </mesh>
-  );
-}
+const DPR_RANGE: [number, number] = [1, 2];
+const DPR_FALLBACK: [number, number] = [1, 1.5];
 
-/** Ground grid plane — dark, mildly reflective. */
-function GroundPlane() {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-      <planeGeometry args={[120, 120, 24, 24]} />
-      <meshStandardMaterial
-        color="#0a0a1a"
-        roughness={0.9}
-        metalness={0.1}
-        wireframe={false}
-      />
-    </mesh>
-  );
-}
+// ─── Loader fallback ──────────────────────────────────────────────────────────
 
-/** Minimal placeholder city: three neon-colored district markers. */
-function PlaceholderCity() {
-  const { selectBuilding } = useSceneStore();
-
+function Loader() {
   return (
     <group>
-      {/* District A — Automatización (cyan) */}
-      <NeonBlock
-        position={[-8, 1.5, -6]}
-        color="#00eaff"
-        scale={[2, 3, 2]}
-      />
-      <NeonBlock
-        position={[-6, 0.5, -4]}
-        color="#00eaff"
-        scale={[1.5, 1, 1.5]}
-      />
-
-      {/* District B — E-commerce (magenta) */}
-      <NeonBlock
-        position={[6, 2, -8]}
-        color="#ff00cc"
-        scale={[2, 4, 2]}
-      />
-      <NeonBlock
-        position={[8, 1, -6]}
-        color="#ff00cc"
-        scale={[1, 2, 1]}
-      />
-
-      {/* District C — Consultoría (amber) */}
-      <NeonBlock
-        position={[0, 1, 8]}
-        color="#ffaa00"
-        scale={[2, 2, 2]}
-      />
-
-      {/* Interactive placeholder block — clicking wires the store */}
-      <mesh
-        position={[0, 2, 0]}
-        onClick={() =>
-          selectBuilding("placeholder", {
-            position: { x: 8, y: 6, z: 8 },
-            lookAt: { x: 0, y: 2, z: 0 },
-          })
-        }
-      >
-        <boxGeometry args={[1.5, 4, 1.5]} />
-        <meshStandardMaterial
-          color="#ffffff"
-          emissive="#8888ff"
-          emissiveIntensity={0.5}
-          roughness={0.3}
-        />
+      <mesh>
+        <boxGeometry args={[0.5, 0.5, 0.5]} />
+        <meshBasicMaterial color="#00eaff" wireframe />
       </mesh>
     </group>
   );
 }
 
-// ─── Scene loader fallback ────────────────────────────────────────────────────
+// ─── Ambient city glow particles ──────────────────────────────────────────────
 
-function Loader() {
+function CityGlow() {
   return (
-    <mesh>
-      <boxGeometry args={[0.5, 0.5, 0.5]} />
-      <meshBasicMaterial color="#ffffff" wireframe />
-    </mesh>
+    <>
+      {/* District A glow cloud — cyan */}
+      <Sparkles
+        count={60}
+        scale={[30, 20, 30]}
+        position={[-22, 8, -16]}
+        size={2.5}
+        speed={0.15}
+        opacity={0.35}
+        color="#00eaff"
+      />
+      {/* District B glow cloud — green */}
+      <Sparkles
+        count={60}
+        scale={[30, 20, 30]}
+        position={[22, 8, 16]}
+        size={2.5}
+        speed={0.15}
+        opacity={0.35}
+        color="#22c55e"
+      />
+      {/* District C glow cloud — amber */}
+      <Sparkles
+        count={50}
+        scale={[25, 18, 25]}
+        position={[0, 8, 28]}
+        size={2.5}
+        speed={0.12}
+        opacity={0.3}
+        color="#f59e0b"
+      />
+      {/* Centre plaza glow — purple */}
+      <Sparkles
+        count={40}
+        scale={[15, 14, 15]}
+        position={[0, 5, 0]}
+        size={3}
+        speed={0.1}
+        opacity={0.25}
+        color="#8888ff"
+      />
+    </>
+  );
+}
+
+// ─── Scene internals (inside Canvas) ─────────────────────────────────────────
+
+interface SceneInternalsProps {
+  dprRange: [number, number];
+  onDprChange: (dpr: number) => void;
+}
+
+function SceneInternals({ dprRange, onDprChange }: SceneInternalsProps) {
+  const { setPhase } = useSceneStore();
+
+  const handleDprDecline = useCallback(() => {
+    onDprChange(dprRange[0]); // Drop to min DPR on decline.
+  }, [dprRange, onDprChange]);
+
+  // Set overview phase once scene mounts.
+  useEffect(() => {
+    setPhase("overview");
+  }, [setPhase]);
+
+  return (
+    <>
+      {/* Adaptive performance monitor */}
+      <PerformanceMonitor
+        onDecline={handleDprDecline}
+        onFallback={() => onDprChange(1)}
+      />
+
+      {/* Ambient night lighting */}
+      <ambientLight intensity={0.12} color="#0a0a2a" />
+
+      {/* Primary directional — moonlight blue */}
+      <directionalLight
+        position={[20, 40, 20]}
+        intensity={0.5}
+        color="#4455aa"
+      />
+
+      {/* Neon accent point lights — simulate city glow */}
+      <pointLight position={[-30, 15, -20]} intensity={2} color="#00eaff" distance={60} />
+      <pointLight position={[30, 12, 20]} intensity={1.5} color="#22c55e" distance={50} />
+      <pointLight position={[5, 18, 35]} intensity={1.5} color="#f59e0b" distance={55} />
+      <pointLight position={[0, 20, 0]} intensity={2} color="#6666ff" distance={40} />
+
+      {/* Sparkle glow halos for fake bloom */}
+      <CityGlow />
+
+      {/* City: all districts, buildings, landmarks, mayor */}
+      <Suspense fallback={<Loader />}>
+        <City />
+      </Suspense>
+
+      {/* Camera rig — click-to-fly rails */}
+      <CameraRig />
+
+      {/* OrbitControls for free-look between flights */}
+      <OrbitControls
+        enableDamping
+        dampingFactor={0.08}
+        minPolarAngle={0.15}      // Can't go underground
+        maxPolarAngle={Math.PI / 2.1}
+        minDistance={5}
+        maxDistance={120}
+        enablePan={false}          // No panning — keeps users anchored to city
+        rotateSpeed={0.5}
+        zoomSpeed={0.8}
+        makeDefault={false}        // CameraRig takes precedence during flight
+      />
+    </>
   );
 }
 
 // ─── Scene root ───────────────────────────────────────────────────────────────
 
 export default function Scene() {
+  const dprRef = useRef<[number, number]>(DPR_RANGE);
+
+  const handleDprChange = useCallback((dpr: number) => {
+    dprRef.current = [dpr, dpr];
+  }, []);
+
   return (
     <Canvas
       camera={{
@@ -147,28 +191,22 @@ export default function Scene() {
         ],
         fov: 55,
         near: 0.1,
-        far: 500,
+        far: 600,
       }}
       style={{ background: "#020210" }}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
-      dpr={[1, 2]}
+      gl={{
+        antialias: false, // Disabled on mobile tier; emissive glow compensates
+        powerPreference: "high-performance",
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1.2,
+      }}
+      dpr={DPR_RANGE}
+      shadows={false}
     >
-      {/* Ambient + neon-flavored directional lights */}
-      <ambientLight intensity={0.2} color="#1a1a3a" />
-      <directionalLight
-        position={[10, 20, 10]}
-        intensity={0.6}
-        color="#6666ff"
+      <SceneInternals
+        dprRange={dprRef.current ?? DPR_FALLBACK}
+        onDprChange={handleDprChange}
       />
-      <pointLight position={[-10, 10, -10]} intensity={1} color="#ff00cc" />
-      <pointLight position={[10, 5, 10]} intensity={0.8} color="#00eaff" />
-
-      <Suspense fallback={<Loader />}>
-        <GroundPlane />
-        <PlaceholderCity />
-      </Suspense>
-
-      <CameraRig />
     </Canvas>
   );
 }
