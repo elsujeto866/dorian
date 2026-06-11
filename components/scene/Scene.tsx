@@ -137,6 +137,13 @@ function SceneInternals({ onDprChange }: SceneInternalsProps) {
         onFallback={() => onDprChange(1)}
       />
 
+      {/* ── Fog — gives depth to the void, colour-matched to sky ── */}
+      {isDay ? (
+        <fog attach="fog" args={["#b8dfff", 60, 220]} />
+      ) : (
+        <fog attach="fog" args={["#0a0a28", 70, 250]} />
+      )}
+
       {/* ── Lighting — switches between night and day ── */}
       {isDay ? (
         <>

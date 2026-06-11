@@ -51,26 +51,63 @@ const MAYOR_WAYPOINT = computeFocusWaypoint(
 
 // ─── Ground plane ─────────────────────────────────────────────────────────────
 
+/**
+ * Dark asphalt ground with a subtle blue-black metalness so neon lights
+ * reflect slightly. Larger than before to ensure the void is fully covered.
+ */
 function GroundPlane() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow={false}>
-      <planeGeometry args={[200, 200, 1, 1]} />
-      <meshStandardMaterial color="#050510" roughness={0.95} metalness={0.05} />
+      <planeGeometry args={[300, 300, 1, 1]} />
+      <meshStandardMaterial
+        color="#07071a"
+        roughness={0.85}
+        metalness={0.15}
+        emissive="#050510"
+        emissiveIntensity={0.05}
+      />
     </mesh>
   );
 }
 
 // ─── Street grid lines ────────────────────────────────────────────────────────
 
+/**
+ * Emissive street grid — more visible than before, colour-matched to night/day
+ * via district accent tones. Grid lines glow faintly so the city feels inhabited.
+ */
 function StreetGrid() {
   const gridRef = useRef<THREE.GridHelper | null>(null);
 
   const grid = useMemo(() => {
-    const g = new THREE.GridHelper(120, 40, "#0d1135", "#0a0e2a");
+    // Primary lines slightly brighter; secondary lines dark blue.
+    const g = new THREE.GridHelper(160, 48, "#1a1f5e", "#0c1030");
     return g;
   }, []);
 
   return <primitive ref={gridRef} object={grid} position={[0, 0.01, 0]} />;
+}
+
+// ─── District ground accent (emissive tinted pad under buildings) ─────────────
+
+/**
+ * A very flat emissive pad on the ground under each district so the category
+ * color bleeds upward and provides ambient fill even without point lights.
+ */
+function DistrictGroundAccent({ center, color }: { center: Vec3; color: string }) {
+  return (
+    <mesh position={[center.x, 0.0, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
+      <circleGeometry args={[14, 16]} />
+      <meshStandardMaterial
+        color="#000010"
+        emissive={color}
+        emissiveIntensity={0.08}
+        roughness={1}
+        transparent
+        opacity={0.7}
+      />
+    </mesh>
+  );
 }
 
 // ─── Mayor statue (central plaza) ────────────────────────────────────────────
@@ -163,8 +200,12 @@ function MayorStatue() {
         <meshStandardMaterial color="#f5c87a" roughness={0.4} />
       </mesh>
 
-      {/* Mayor point-light — illuminates plaza */}
-      <pointLight position={[0, 6, 0]} intensity={2.5} color="#6666ff" distance={20} />
+      {/* Key light from front — gives the statue a readable silhouette */}
+      <pointLight position={[0, 8, 4]} intensity={3.5} color="#aaaaff" distance={18} />
+      {/* Rim light from behind — separates statue from background */}
+      <pointLight position={[0, 5, -4]} intensity={2.0} color="#00eaff" distance={14} />
+      {/* Fill light low from side — catches arm detail */}
+      <pointLight position={[-4, 3, 0]} intensity={1.5} color="#6666ff" distance={12} />
     </group>
   );
 }
@@ -632,6 +673,7 @@ export function City() {
       {/* Category districts + buildings (fully data-driven) */}
       {districts.map((district) => (
         <group key={district.id}>
+          <DistrictGroundAccent center={district.center} color={district.color} />
           <DistrictMarker center={district.center} color={district.color} />
           {district.buildings.map((buildingData) => (
             <Building key={buildingData.id} data={buildingData} />

@@ -34,8 +34,8 @@ import {
   POPUP_DURATION,
   deriveEarningsLabel,
   WALKER_COUNT,
-} from "./walkers";
-import type { WalkerState } from "./walkers";
+} from "./walkerUtils";
+import type { WalkerState } from "./walkerUtils";
 import type { BuildingData } from "./cityLayout";
 import type { Project } from "@/lib/content/types";
 

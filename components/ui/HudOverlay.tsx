@@ -105,9 +105,9 @@ function BuildingPanel({ project, onClose }: BuildingPanelProps) {
       role="dialog"
       aria-label={`Información del proyecto: ${project.name}`}
       aria-modal="false"
-      className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-sm pointer-events-auto z-10"
+      className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-sm pointer-events-auto z-10"
     >
-      <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-xl p-5 shadow-xl text-left">
+      <div className="bg-slate-950/90 backdrop-blur-md border border-slate-600/60 rounded-2xl p-5 shadow-2xl shadow-black/60 text-left ring-1 ring-white/5">
         <div className="flex items-start justify-between gap-4 mb-3">
           <h2 className="text-white font-semibold text-base leading-snug">
             {project.name}
@@ -131,7 +131,7 @@ function BuildingPanel({ project, onClose }: BuildingPanelProps) {
         <p className="text-slate-300 text-sm leading-relaxed mb-3">{project.summary}</p>
 
         {/* ROI highlight */}
-        <div className="bg-slate-800/60 border border-slate-600 rounded-lg px-3 py-2 mb-3">
+        <div className="bg-slate-900/80 border border-cyan-800/40 rounded-xl px-3 py-2 mb-3">
           <p className="text-xs text-slate-400 mb-1">Resultado</p>
           <p className="text-cyan-300 font-semibold text-sm">{formatRoi(project)}</p>
         </div>
@@ -143,7 +143,7 @@ function BuildingPanel({ project, onClose }: BuildingPanelProps) {
               <span
                 key={tag}
                 role="listitem"
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-800 border border-slate-600 text-slate-300"
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-800/70 border border-slate-600/60 text-slate-300 hover:border-slate-500 transition-colors"
               >
                 {tag}
               </span>
@@ -171,9 +171,9 @@ function MayorPanel({ onClose }: MayorPanelProps) {
       role="dialog"
       aria-label="Perfil: Dorian — El Desarrollador"
       aria-modal="false"
-      className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-md pointer-events-auto z-10"
+      className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md pointer-events-auto z-10"
     >
-      <div className="bg-slate-900/95 backdrop-blur-sm border border-cyan-800/50 rounded-xl p-6 shadow-xl text-left">
+      <div className="bg-slate-950/90 backdrop-blur-md border border-cyan-700/40 rounded-2xl p-6 shadow-2xl shadow-black/60 text-left ring-1 ring-cyan-500/10">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <h2 className="text-white font-bold text-lg leading-tight">Dorian</h2>
@@ -234,44 +234,50 @@ interface NavListProps {
 
 function BuildingNavList({ projects, selectedId, onSelect }: NavListProps) {
   return (
-    <nav aria-label="Navegar por proyectos" className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-auto z-10 max-h-[60vh] overflow-y-auto">
-      <ul className="flex flex-col gap-1" role="listbox" aria-label="Lista de proyectos">
-        {projects.map((project) => (
-          <li key={project.id} role="option" aria-selected={selectedId === project.id}>
+    <nav
+      aria-label="Navegar por proyectos"
+      className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-auto z-10 max-h-[60vh] overflow-y-auto"
+    >
+      {/* Glassmorphism container */}
+      <div className="bg-slate-950/75 backdrop-blur-md border border-slate-700/50 rounded-2xl p-2 shadow-2xl shadow-black/50 ring-1 ring-white/5">
+        <ul className="flex flex-col gap-0.5" role="listbox" aria-label="Lista de proyectos">
+          {projects.map((project) => (
+            <li key={project.id} role="option" aria-selected={selectedId === project.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(project.id)}
+                className={`
+                  text-left w-full px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150
+                  focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-1 focus:ring-offset-slate-950
+                  ${selectedId === project.id
+                    ? "bg-cyan-900/70 text-cyan-200 border border-cyan-600/60 shadow-sm shadow-cyan-900/40"
+                    : "text-slate-400 border border-transparent hover:text-white hover:bg-slate-800/60 hover:border-slate-600/40 active:bg-slate-700/60"
+                  }
+                `}
+              >
+                {project.name}
+              </button>
+            </li>
+          ))}
+          {/* Developer statue entry */}
+          <li role="option" aria-selected={selectedId === MAYOR_ID}>
             <button
               type="button"
-              onClick={() => onSelect(project.id)}
+              onClick={() => onSelect(MAYOR_ID)}
               className={`
-                text-left w-full px-3 py-1.5 rounded-md text-xs font-medium transition-colors
-                focus:outline-none focus:ring-2 focus:ring-cyan-400
-                ${selectedId === project.id
-                  ? "bg-cyan-900/80 text-cyan-300 border border-cyan-700"
-                  : "bg-slate-900/70 text-slate-400 border border-transparent hover:text-white hover:bg-slate-800/80"
+                text-left w-full px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150
+                focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-1 focus:ring-offset-slate-950
+                ${selectedId === MAYOR_ID
+                  ? "bg-cyan-900/70 text-cyan-200 border border-cyan-600/60 shadow-sm shadow-cyan-900/40"
+                  : "text-slate-400 border border-transparent hover:text-white hover:bg-slate-800/60 hover:border-slate-600/40 active:bg-slate-700/60"
                 }
               `}
             >
-              {project.name}
+              El Desarrollador (Dorian)
             </button>
           </li>
-        ))}
-        {/* Mayor entry */}
-        <li role="option" aria-selected={selectedId === MAYOR_ID}>
-          <button
-            type="button"
-            onClick={() => onSelect(MAYOR_ID)}
-            className={`
-              text-left w-full px-3 py-1.5 rounded-md text-xs font-medium transition-colors
-              focus:outline-none focus:ring-2 focus:ring-cyan-400
-              ${selectedId === MAYOR_ID
-                ? "bg-cyan-900/80 text-cyan-300 border border-cyan-700"
-                : "bg-slate-900/70 text-slate-400 border border-transparent hover:text-white hover:bg-slate-800/80"
-              }
-            `}
-          >
-            El Desarrollador (Dorian)
-          </button>
-        </li>
-      </ul>
+        </ul>
+      </div>
     </nav>
   );
 }

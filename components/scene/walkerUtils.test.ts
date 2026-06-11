@@ -7,7 +7,7 @@ import {
   initWalkers,
   WALKER_COUNT,
   POPUP_DURATION,
-} from "./walkers";
+} from "./walkerUtils";
 import type { BuildingData } from "./cityLayout";
 
 // ─── Minimal BuildingData fixture ────────────────────────────────────────────
