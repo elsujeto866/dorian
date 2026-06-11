@@ -39,10 +39,10 @@ import { buildCityLayout } from "./cityLayout";
 import { getAllProjects, getAllCategories } from "@/lib/content/content";
 import { computeFocusWaypoint } from "./waypoint";
 import type { Vec3 } from "./useSceneStore";
+import { MAYOR_ID } from "./constants";
 
 // ─── Mayor statue constants ────────────────────────────────────────────────────
 
-const MAYOR_ID = "__mayor__";
 const MAYOR_WAYPOINT = computeFocusWaypoint(
   { position: { x: 0, y: 0, z: 0 }, halfHeight: 4 },
   { distance: 10, elevationOffset: 2 }

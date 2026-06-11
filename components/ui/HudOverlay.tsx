@@ -26,10 +26,7 @@ import { getAllProjects, getAllCategories } from "@/lib/content/content";
 import type { Project } from "@/lib/content/types";
 import { buildCityLayout } from "../scene/cityLayout";
 import { computeFocusWaypoint } from "../scene/waypoint";
-
-// ─── Mayor id constant — must match City.tsx ──────────────────────────────────
-
-const MAYOR_ID = "__mayor__";
+import { MAYOR_ID } from "../scene/constants";
 
 // ─── ROI display helper ───────────────────────────────────────────────────────
 
