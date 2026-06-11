@@ -40,6 +40,7 @@ import { getAllProjects, getAllCategories } from "@/lib/content/content";
 import { computeFocusWaypoint } from "./waypoint";
 import type { Vec3 } from "./useSceneStore";
 import { MAYOR_ID } from "./constants";
+import { Walkers } from "./Walkers";
 
 // ─── Mayor statue constants ────────────────────────────────────────────────────
 
@@ -390,6 +391,11 @@ export function City() {
     [projects, categories]
   );
 
+  const allBuildings = useMemo(
+    () => districts.flatMap((d) => d.buildings),
+    [districts]
+  );
+
   return (
     <group>
       <GroundPlane />
@@ -406,12 +412,15 @@ export function City() {
         </group>
       ))}
 
-      {/* Central plaza: mayor statue */}
+      {/* Central plaza: developer statue */}
       <MayorStatue />
 
       {/* Ecuador landmarks (decorative) */}
       <MitadDelMundo />
       <QuitoColonialCluster />
+
+      {/* Pedestrian walkers with earnings popups */}
+      <Walkers buildings={allBuildings} projects={projects} />
     </group>
   );
 }
