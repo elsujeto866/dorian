@@ -380,6 +380,233 @@ function StreetlightGrid() {
   );
 }
 
+// ─── Traffic lights (semáforos) ───────────────────────────────────────────────
+
+/**
+ * A single traffic light pole with three emissive lamps cycling red/amber/green.
+ * Clock-based deterministic phase — no randomness.
+ */
+function TrafficLight({ position, phaseOffset }: { position: Vec3; phaseOffset: number }) {
+  const redRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  const amberRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  const greenRef = useRef<THREE.MeshStandardMaterial | null>(null);
+
+  // Cycle: red 2s → amber 0.8s → green 2s → amber 0.8s → repeat (5.6s total)
+  const CYCLE = 5.6;
+  const RED_END = 2.0;
+  const AMBER1_END = 2.8;
+  const GREEN_END = 4.8;
+  // AMBER2_END = 5.6 (full cycle)
+
+  useFrame(({ clock }) => {
+    const t = ((clock.getElapsedTime() + phaseOffset) % CYCLE);
+    const inRed = t < RED_END;
+    const inAmber = (t >= RED_END && t < AMBER1_END) || t >= GREEN_END;
+    const inGreen = t >= AMBER1_END && t < GREEN_END;
+
+    if (redRef.current) {
+      redRef.current.emissiveIntensity = inRed ? 2.0 : 0.08;
+      redRef.current.emissive = new THREE.Color(inRed ? "#ff2200" : "#220000");
+    }
+    if (amberRef.current) {
+      amberRef.current.emissiveIntensity = inAmber ? 2.0 : 0.08;
+      amberRef.current.emissive = new THREE.Color(inAmber ? "#ffaa00" : "#221100");
+    }
+    if (greenRef.current) {
+      greenRef.current.emissiveIntensity = inGreen ? 2.0 : 0.08;
+      greenRef.current.emissive = new THREE.Color(inGreen ? "#00ff44" : "#002200");
+    }
+  });
+
+  return (
+    <group position={[position.x, position.y, position.z]}>
+      {/* Slim pole */}
+      <mesh position={[0, 2.5, 0]}>
+        <boxGeometry args={[0.12, 5, 0.12]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
+      </mesh>
+      {/* Housing box */}
+      <mesh position={[0, 5.4, 0]}>
+        <boxGeometry args={[0.35, 1.1, 0.3]} />
+        <meshStandardMaterial color="#111111" roughness={0.6} />
+      </mesh>
+      {/* Red lamp */}
+      <mesh position={[0, 5.75, 0.16]}>
+        <sphereGeometry args={[0.1, 6, 4]} />
+        <meshStandardMaterial ref={redRef} color="#330000" emissive="#ff2200" emissiveIntensity={0.08} roughness={0.1} />
+      </mesh>
+      {/* Amber lamp */}
+      <mesh position={[0, 5.42, 0.16]}>
+        <sphereGeometry args={[0.1, 6, 4]} />
+        <meshStandardMaterial ref={amberRef} color="#221100" emissive="#ffaa00" emissiveIntensity={0.08} roughness={0.1} />
+      </mesh>
+      {/* Green lamp */}
+      <mesh position={[0, 5.09, 0.16]}>
+        <sphereGeometry args={[0.1, 6, 4]} />
+        <meshStandardMaterial ref={greenRef} color="#002200" emissive="#00ff44" emissiveIntensity={2.0} roughness={0.1} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Place traffic lights at a few street intersections. */
+function TrafficLights() {
+  // Fixed intersection positions — derived from streetlight grid intersections.
+  const lights: Array<{ pos: Vec3; offset: number }> = useMemo(() => [
+    { pos: { x: -18, y: 0, z: -18 }, offset: 0 },
+    { pos: { x: 18, y: 0, z: -18 }, offset: 1.4 },
+    { pos: { x: -18, y: 0, z: 18 }, offset: 2.8 },
+    { pos: { x: 18, y: 0, z: 18 }, offset: 0.7 },
+    { pos: { x: 0, y: 0, z: -18 }, offset: 2.1 },
+  ], []);
+
+  return (
+    <>
+      {lights.map((l, i) => (
+        <TrafficLight key={i} position={l.pos} phaseOffset={l.offset} />
+      ))}
+    </>
+  );
+}
+
+// ─── Pets (mascotas) ──────────────────────────────────────────────────────────
+
+/**
+ * Low-poly LEGO llama — Ecuador reference.
+ * Blocky construction from boxes/cylinders.
+ * Wanders a short seeded loop around a home position.
+ */
+function Llama({ homeX, homeZ, phaseOffset }: { homeX: number; homeZ: number; phaseOffset: number }) {
+  const groupRef = useRef<THREE.Group | null>(null);
+
+  const LOOP_RADIUS = 4.5;
+  const LOOP_SPEED = 0.25; // radians/second
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    const t = clock.getElapsedTime() * LOOP_SPEED + phaseOffset;
+    groupRef.current.position.x = homeX + Math.cos(t) * LOOP_RADIUS;
+    groupRef.current.position.z = homeZ + Math.sin(t) * LOOP_RADIUS;
+    groupRef.current.rotation.y = -t + Math.PI / 2;
+    // Slight vertical bob
+    groupRef.current.position.y = 0.05 * Math.abs(Math.sin(t * 4));
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Body */}
+      <mesh position={[0, 0.7, 0]}>
+        <boxGeometry args={[0.9, 0.55, 0.45]} />
+        <meshStandardMaterial color="#d4a84b" emissive="#553300" emissiveIntensity={0.2} roughness={0.7} />
+      </mesh>
+      {/* Neck */}
+      <mesh position={[0.38, 1.1, 0]}>
+        <boxGeometry args={[0.22, 0.6, 0.22]} />
+        <meshStandardMaterial color="#c89a42" roughness={0.7} />
+      </mesh>
+      {/* Head */}
+      <mesh position={[0.42, 1.52, 0]}>
+        <boxGeometry args={[0.3, 0.28, 0.24]} />
+        <meshStandardMaterial color="#d4a84b" roughness={0.6} />
+      </mesh>
+      {/* Ear left */}
+      <mesh position={[0.38, 1.7, 0.1]}>
+        <boxGeometry args={[0.08, 0.2, 0.06]} />
+        <meshStandardMaterial color="#c89a42" roughness={0.7} />
+      </mesh>
+      {/* Ear right */}
+      <mesh position={[0.38, 1.7, -0.1]}>
+        <boxGeometry args={[0.08, 0.2, 0.06]} />
+        <meshStandardMaterial color="#c89a42" roughness={0.7} />
+      </mesh>
+      {/* Legs (4 box legs) */}
+      {([-0.28, 0.28] as number[]).map((xOff) =>
+        ([-0.14, 0.14] as number[]).map((zOff) => (
+          <mesh key={`${xOff}_${zOff}`} position={[xOff, 0.25, zOff]}>
+            <boxGeometry args={[0.14, 0.5, 0.14]} />
+            <meshStandardMaterial color="#c09040" roughness={0.8} />
+          </mesh>
+        ))
+      )}
+    </group>
+  );
+}
+
+/**
+ * Low-poly dog/cat pet — blocky LEGO animal.
+ * Uses seeded color from neon palette for whimsy.
+ */
+function Pet({
+  homeX,
+  homeZ,
+  phaseOffset,
+  color,
+  loopRadius,
+}: {
+  homeX: number;
+  homeZ: number;
+  phaseOffset: number;
+  color: string;
+  loopRadius: number;
+}) {
+  const groupRef = useRef<THREE.Group | null>(null);
+  const LOOP_SPEED = 0.35;
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    const t = clock.getElapsedTime() * LOOP_SPEED + phaseOffset;
+    groupRef.current.position.x = homeX + Math.cos(t) * loopRadius;
+    groupRef.current.position.z = homeZ + Math.sin(t) * loopRadius;
+    groupRef.current.rotation.y = -t + Math.PI / 2;
+    groupRef.current.position.y = 0.04 * Math.abs(Math.sin(t * 5));
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Body */}
+      <mesh position={[0, 0.22, 0]}>
+        <boxGeometry args={[0.45, 0.25, 0.25]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.15} roughness={0.6} />
+      </mesh>
+      {/* Head */}
+      <mesh position={[0.26, 0.38, 0]}>
+        <boxGeometry args={[0.22, 0.2, 0.2]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.15} roughness={0.5} />
+      </mesh>
+      {/* Tail stub */}
+      <mesh position={[-0.3, 0.3, 0]} rotation={[0, 0, 0.5]}>
+        <boxGeometry args={[0.22, 0.08, 0.08]} />
+        <meshStandardMaterial color={color} roughness={0.7} />
+      </mesh>
+      {/* Legs */}
+      {([-0.12, 0.12] as number[]).map((xOff) =>
+        ([-0.08, 0.08] as number[]).map((zOff) => (
+          <mesh key={`${xOff}_${zOff}`} position={[xOff, 0.06, zOff]}>
+            <boxGeometry args={[0.09, 0.14, 0.09]} />
+            <meshStandardMaterial color={color} roughness={0.8} />
+          </mesh>
+        ))
+      )}
+    </group>
+  );
+}
+
+/** Spawn the decorative animal mascots across the city. */
+function Pets() {
+  return (
+    <>
+      {/* LLAMA — centerpiece Ecuador reference, near the Mitad del Mundo */}
+      <Llama homeX={38} homeZ={8} phaseOffset={0} />
+      <Llama homeX={-25} homeZ={20} phaseOffset={2.1} />
+
+      {/* Dogs / cats — neon-colored, wandering near district areas */}
+      <Pet homeX={-20} homeZ={-14} phaseOffset={0.5} color="#00eaff" loopRadius={3} />
+      <Pet homeX={20} homeZ={12} phaseOffset={1.8} color="#ff00cc" loopRadius={3.5} />
+      <Pet homeX={8} homeZ={-22} phaseOffset={3.2} color="#22c55e" loopRadius={2.5} />
+    </>
+  );
+}
+
 // ─── City root ────────────────────────────────────────────────────────────────
 
 export function City() {
@@ -418,6 +645,12 @@ export function City() {
       {/* Ecuador landmarks (decorative) */}
       <MitadDelMundo />
       <QuitoColonialCluster />
+
+      {/* Traffic lights at street intersections */}
+      <TrafficLights />
+
+      {/* Animal mascots */}
+      <Pets />
 
       {/* Pedestrian walkers with earnings popups */}
       <Walkers buildings={allBuildings} projects={projects} />
