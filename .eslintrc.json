@@ -1,0 +1,30 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["three", "@react-three/*"],
+            "message": "Three.js and @react-three/* imports are only allowed inside components/scene/. Move this import or this file to components/scene/."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["components/scene/**/*.ts", "components/scene/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["components/experience/Experience.tsx"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
+}

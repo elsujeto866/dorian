@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens */
+:root {
+  /* Colors */
+  --color-brand-primary: #0ea5e9;
+  --color-brand-accent: #22c55e;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --color-bg-base: #ffffff;
+  --color-bg-surface: #f8fafc;
+  --color-bg-overlay: rgba(15, 23, 42, 0.8);
+
+  /* Spacing */
+  --space-section: 4rem;
+  --space-container-max: 72rem;
+  --space-container-px: 1.5rem;
+
+  /* Typography */
+  --font-sans: var(--font-inter, system-ui, -apple-system, sans-serif);
+  --font-size-hero: clamp(2rem, 5vw, 3.5rem);
+  --font-size-section: clamp(1.5rem, 3vw, 2rem);
+}
+
+/* CSS Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Skip link for accessibility */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  padding: 0.5rem 1rem;
+  background: var(--color-brand-primary);
+  color: #fff;
+  z-index: 9999;
+  border-radius: 0 0 0.25rem 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
