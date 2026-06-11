@@ -27,7 +27,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, PerformanceMonitor, Sparkles } from "@react-three/drei";
+import { OrbitControls, PerformanceMonitor, Sparkles, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import { CameraRig } from "./CameraRig";
 import { City } from "./City";
@@ -120,7 +120,8 @@ interface SceneInternalsProps {
 }
 
 function SceneInternals({ onDprChange }: SceneInternalsProps) {
-  const { setPhase } = useSceneStore();
+  const { setPhase, timeOfDay } = useSceneStore();
+  const isDay = timeOfDay === "day";
 
   // Set overview phase once scene mounts.
   useEffect(() => {
@@ -136,26 +137,42 @@ function SceneInternals({ onDprChange }: SceneInternalsProps) {
         onFallback={() => onDprChange(1)}
       />
 
-      {/* Ambient night lighting */}
-      <ambientLight intensity={0.12} color="#0a0a2a" />
+      {/* ── Lighting — switches between night and day ── */}
+      {isDay ? (
+        <>
+          {/* Day: bright warm Andean sky lighting */}
+          <ambientLight intensity={1.2} color="#ffe8c8" />
+          <directionalLight position={[30, 60, 20]} intensity={3.5} color="#fff5e0" />
+          {/* Fill from opposite side — sky bounce */}
+          <directionalLight position={[-20, 30, -20]} intensity={0.8} color="#bbd8ff" />
+          {/* Soft district fill — dimmed neon, still present for readability */}
+          <pointLight position={[-30, 15, -20]} intensity={0.5} color="#00eaff" distance={60} />
+          <pointLight position={[30, 12, 20]} intensity={0.5} color="#22c55e" distance={50} />
+          <pointLight position={[5, 18, 35]} intensity={0.5} color="#f59e0b" distance={55} />
+        </>
+      ) : (
+        <>
+          {/* Night: elevated ambient so geometry reads; moonlight blue key */}
+          <ambientLight intensity={0.35} color="#1a1a3a" />
+          <directionalLight position={[20, 40, 20]} intensity={0.7} color="#4455aa" />
+          {/* Neon accent point lights — simulate city glow */}
+          <pointLight position={[-30, 15, -20]} intensity={2.5} color="#00eaff" distance={60} />
+          <pointLight position={[30, 12, 20]} intensity={2.0} color="#22c55e" distance={50} />
+          <pointLight position={[5, 18, 35]} intensity={2.0} color="#f59e0b" distance={55} />
+          <pointLight position={[0, 20, 0]} intensity={2.5} color="#6666ff" distance={40} />
+          {/* District fill lights — ensure building faces catch color */}
+          <pointLight position={[-22, 8, -16]} intensity={1.2} color="#00eaff" distance={35} />
+          <pointLight position={[22, 8, 16]} intensity={1.0} color="#22c55e" distance={35} />
+          <pointLight position={[0, 8, 28]} intensity={1.0} color="#f59e0b" distance={30} />
+          {/* Drei Stars — visible night sky (not pure black) */}
+          <Stars radius={120} depth={40} count={2000} factor={4} saturation={0.5} fade />
+        </>
+      )}
 
-      {/* Primary directional — moonlight blue */}
-      <directionalLight
-        position={[20, 40, 20]}
-        intensity={0.5}
-        color="#4455aa"
-      />
+      {/* Sparkle glow halos for fake bloom — night only */}
+      {!isDay && <CityGlow />}
 
-      {/* Neon accent point lights — simulate city glow */}
-      <pointLight position={[-30, 15, -20]} intensity={2} color="#00eaff" distance={60} />
-      <pointLight position={[30, 12, 20]} intensity={1.5} color="#22c55e" distance={50} />
-      <pointLight position={[5, 18, 35]} intensity={1.5} color="#f59e0b" distance={55} />
-      <pointLight position={[0, 20, 0]} intensity={2} color="#6666ff" distance={40} />
-
-      {/* Sparkle glow halos for fake bloom */}
-      <CityGlow />
-
-      {/* City: all districts, buildings, landmarks, mayor */}
+      {/* City: all districts, buildings, landmarks, developer */}
       <Suspense fallback={<Loader />}>
         <City />
       </Suspense>
@@ -182,13 +199,19 @@ function SceneInternals({ onDprChange }: SceneInternalsProps) {
 
 // ─── Scene root ───────────────────────────────────────────────────────────────
 
+// ─── Scene root ───────────────────────────────────────────────────────────────
+
 export default function Scene() {
   // dpr is React state so Canvas re-renders whenever PerformanceMonitor adjusts it.
   const [dpr, setDpr] = useState<[number, number] | number>(DPR_RANGE);
+  const timeOfDay = useSceneStore((s) => s.timeOfDay);
 
   const handleDprChange = useCallback((value: number) => {
     setDpr(value);
   }, []);
+
+  // Day sky: light blue Andean. Night: very dark blue (not pure black).
+  const bgColor = timeOfDay === "day" ? "#7fc8f8" : "#060618";
 
   return (
     <Canvas
@@ -202,12 +225,12 @@ export default function Scene() {
         near: 0.1,
         far: 600,
       }}
-      style={{ background: "#020210" }}
+      style={{ background: bgColor }}
       gl={{
         antialias: false, // Disabled on mobile tier; emissive glow compensates
         powerPreference: "high-performance",
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.2,
+        toneMappingExposure: timeOfDay === "day" ? 1.0 : 1.2,
       }}
       dpr={dpr}
       shadows={false}

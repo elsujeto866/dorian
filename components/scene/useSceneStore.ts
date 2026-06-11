@@ -30,6 +30,8 @@ export interface Waypoint {
 
 export type ScenePhase = "loading" | "overview" | "focused";
 
+export type TimeOfDay = "night" | "day";
+
 export interface SceneState {
   /** Project id currently in focus; null = overview. */
   selectedBuildingId: string | null;
@@ -39,6 +41,9 @@ export interface SceneState {
 
   /** Coarse scene lifecycle phase, used by HUD and Experience to gate UI. */
   phase: ScenePhase;
+
+  /** Day/night lighting mode. Default: night (cyberpunk neon). */
+  timeOfDay: TimeOfDay;
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
@@ -50,14 +55,18 @@ export interface SceneState {
 
   /** Advance the scene phase (loading → overview → focused, etc.). */
   setPhase: (phase: ScenePhase) => void;
+
+  /** Toggle between day and night lighting modes. */
+  toggleTimeOfDay: () => void;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
-export const useSceneStore = create<SceneState>((set) => ({
+export const useSceneStore = create<SceneState>((set, get) => ({
   selectedBuildingId: null,
   cameraTarget: null,
   phase: "loading",
+  timeOfDay: "night",
 
   selectBuilding: (id, waypoint) =>
     set({ selectedBuildingId: id, cameraTarget: waypoint, phase: "focused" }),
@@ -66,4 +75,7 @@ export const useSceneStore = create<SceneState>((set) => ({
     set({ selectedBuildingId: null, cameraTarget: null, phase: "overview" }),
 
   setPhase: (phase) => set({ phase }),
+
+  toggleTimeOfDay: () =>
+    set({ timeOfDay: get().timeOfDay === "night" ? "day" : "night" }),
 }));

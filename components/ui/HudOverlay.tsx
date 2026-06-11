@@ -28,6 +28,55 @@ import { buildCityLayout } from "../scene/cityLayout";
 import { computeFocusWaypoint } from "../scene/waypoint";
 import { MAYOR_ID } from "../scene/constants";
 
+// ─── Day/night toggle button ──────────────────────────────────────────────────
+
+function DayNightToggle() {
+  const { timeOfDay, toggleTimeOfDay } = useSceneStore();
+  const isDay = timeOfDay === "day";
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTimeOfDay}
+      aria-label={isDay ? "Activar modo noche" : "Activar modo día"}
+      title={isDay ? "Activar modo noche" : "Activar modo día"}
+      className="
+        inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium
+        bg-slate-900/80 backdrop-blur-sm border border-slate-700
+        text-slate-300 hover:text-white hover:bg-slate-800/90
+        transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400
+        focus:ring-offset-2 focus:ring-offset-transparent
+      "
+    >
+      {isDay ? (
+        <>
+          {/* Moon icon */}
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
+          </svg>
+          Modo noche
+        </>
+      ) : (
+        <>
+          {/* Sun icon */}
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          Modo día
+        </>
+      )}
+    </button>
+  );
+}
+
 // ─── ROI display helper ───────────────────────────────────────────────────────
 
 function formatRoi(project: Project): string {
@@ -285,8 +334,9 @@ export function HudOverlay() {
       aria-label="Controles de experiencia 3D"
       className="absolute inset-0 pointer-events-none"
     >
-      {/* ── Always-visible classic link (S-3D7) ──────────────────────────── */}
-      <div className="absolute top-4 right-4 pointer-events-auto z-10">
+      {/* ── Top-right controls ───────────────────────────────────────────── */}
+      <div className="absolute top-4 right-4 pointer-events-auto z-10 flex items-center gap-2">
+        <DayNightToggle />
         <Link
           href="/classic"
           aria-label="Ver versión clásica del portfolio"

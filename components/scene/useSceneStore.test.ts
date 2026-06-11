@@ -8,6 +8,7 @@ beforeEach(() => {
     selectedBuildingId: null,
     cameraTarget: null,
     phase: "loading",
+    timeOfDay: "night",
   });
 });
 
@@ -103,5 +104,27 @@ describe("useSceneStore — getState outside React", () => {
     const { selectedBuildingId, cameraTarget } = useSceneStore.getState();
     expect(selectedBuildingId).toBe("proj-3");
     expect(cameraTarget).toEqual(wp);
+  });
+});
+
+describe("useSceneStore — toggleTimeOfDay", () => {
+  it("starts in night mode", () => {
+    expect(useSceneStore.getState().timeOfDay).toBe("night");
+  });
+
+  it("toggles from night to day", () => {
+    useSceneStore.getState().toggleTimeOfDay();
+    expect(useSceneStore.getState().timeOfDay).toBe("day");
+  });
+
+  it("toggles back from day to night", () => {
+    useSceneStore.getState().toggleTimeOfDay();
+    useSceneStore.getState().toggleTimeOfDay();
+    expect(useSceneStore.getState().timeOfDay).toBe("night");
+  });
+
+  it("is idempotent when called an even number of times", () => {
+    for (let i = 0; i < 4; i++) useSceneStore.getState().toggleTimeOfDay();
+    expect(useSceneStore.getState().timeOfDay).toBe("night");
   });
 });
