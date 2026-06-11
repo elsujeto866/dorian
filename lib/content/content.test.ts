@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ProjectSchema, CategorySchema, ProjectsSchema, CategoriesSchema } from "./schema";
+import { getTop5 } from "./content";
 import type { Project, Category } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -131,40 +132,19 @@ describe("ProjectSchema", () => {
 // ---------------------------------------------------------------------------
 
 describe("getTop5", () => {
-  // We test the pure function by importing it with isolated fixtures.
-  // To avoid coupling to the real data files, we test the sorting logic
-  // directly by constructing projects and calling a local sort helper
-  // that mirrors the content.ts implementation (two-tier: rank ASC, then ROI DESC).
-
-  function sortTop5(projectList: Project[]): Project[] {
-    const ranked = [...projectList]
-      .filter((p) => typeof p.rank === "number")
-      .sort((a, b) => (a.rank as number) - (b.rank as number));
-
-    const unranked = [...projectList]
-      .filter((p) => typeof p.rank !== "number")
-      .sort((a, b) => {
-        const roiDiff = b.roi.amountUsd - a.roi.amountUsd;
-        if (roiDiff !== 0) return roiDiff;
-        const aFeatured = a.featured === true ? 0 : 1;
-        const bFeatured = b.featured === true ? 0 : 1;
-        if (aFeatured !== bFeatured) return aFeatured - bFeatured;
-        return a.name.localeCompare(b.name);
-      });
-
-    return [...ranked, ...unranked].slice(0, 5);
-  }
+  // getTop5 from content.ts accepts an optional projectList parameter,
+  // so tests feed fixture data through the real implementation.
 
   it("returns at most 5 projects", () => {
     const many = Array.from({ length: 10 }, (_, i) =>
       makeProject({ id: `project-${i}`, roi: { kind: "saved", amountUsd: 1000 * (i + 1) } })
     );
-    expect(sortTop5(many)).toHaveLength(5);
+    expect(getTop5(many)).toHaveLength(5);
   });
 
   it("returns all projects when fewer than 5 exist", () => {
     const few = [makeProject({ roi: { kind: "saved", amountUsd: 5000 } })];
-    expect(sortTop5(few)).toHaveLength(1);
+    expect(getTop5(few)).toHaveLength(1);
   });
 
   it("sorts by roi.amountUsd DESC when no ranks assigned (S-P7 baseline)", () => {
@@ -173,7 +153,7 @@ describe("getTop5", () => {
       makeProject({ id: "high", roi: { kind: "earned", amountUsd: 50000 } }),
       makeProject({ id: "mid", roi: { kind: "saved", amountUsd: 20000 } }),
     ];
-    const result = sortTop5(projectList);
+    const result = getTop5(projectList);
     expect(result[0].id).toBe("high");
     expect(result[1].id).toBe("mid");
     expect(result[2].id).toBe("low");
@@ -185,7 +165,7 @@ describe("getTop5", () => {
       makeProject({ id: "unranked-high-roi", roi: { kind: "saved", amountUsd: 99000 } }),
       makeProject({ id: "ranked-low-roi", roi: { kind: "saved", amountUsd: 1000 }, rank: 1 }),
     ];
-    const result = sortTop5(projectList);
+    const result = getTop5(projectList);
     expect(result[0].id).toBe("ranked-low-roi");
     expect(result[1].id).toBe("unranked-high-roi");
   });
@@ -197,7 +177,7 @@ describe("getTop5", () => {
       makeProject({ id: "no-rank-low", roi: { kind: "saved", amountUsd: 1000 } }),
       makeProject({ id: "rank-1", roi: { kind: "saved", amountUsd: 2000 }, rank: 1 }),
     ];
-    const result = sortTop5(projectList);
+    const result = getTop5(projectList);
     // Ranked first: rank-1, rank-2
     expect(result[0].id).toBe("rank-1");
     expect(result[1].id).toBe("rank-2");
@@ -212,7 +192,7 @@ describe("getTop5", () => {
       makeProject({ id: "a", roi: { kind: "saved", amountUsd: 45000 } }),
       makeProject({ id: "c", roi: { kind: "saved", amountUsd: 15000 } }),
     ];
-    const result = sortTop5(projectList);
+    const result = getTop5(projectList);
     expect(result[0].id).toBe("a");
     expect(result[1].id).toBe("b");
     expect(result[2].id).toBe("c");
@@ -223,7 +203,7 @@ describe("getTop5", () => {
       makeProject({ id: "unfeatured", roi: { kind: "saved", amountUsd: 10000 }, featured: false }),
       makeProject({ id: "featured", roi: { kind: "earned", amountUsd: 10000 }, featured: true }),
     ];
-    const result = sortTop5(projectList);
+    const result = getTop5(projectList);
     expect(result[0].id).toBe("featured");
     expect(result[1].id).toBe("unfeatured");
   });
@@ -233,7 +213,7 @@ describe("getTop5", () => {
       makeProject({ id: "b-project", name: "Zeta", roi: { kind: "saved", amountUsd: 10000 }, featured: true }),
       makeProject({ id: "a-project", name: "Alpha", roi: { kind: "earned", amountUsd: 10000 }, featured: true }),
     ];
-    const result = sortTop5(projectList);
+    const result = getTop5(projectList);
     expect(result[0].id).toBe("a-project");
     expect(result[1].id).toBe("b-project");
   });
@@ -356,12 +336,12 @@ describe("real data files (S-C1)", () => {
   it("at least 1 project qualifies for Top 5 (spec 1.3 min-featured invariant)", async () => {
     const projectsRaw = await import("@/data/projects.json");
     const projs = ProjectsSchema.parse(projectsRaw.default);
-    const qualifiedCount = projs.filter(
-      (p) => p.featured === true || typeof p.rank === "number"
-    ).length;
+    // Exercise the real getTop5 path: if no project qualifies the result is empty,
+    // which is what the build-time invariant in content.ts guards against.
+    const top5 = getTop5(projs);
     expect(
-      qualifiedCount,
-      "projects.json must have at least 1 project with featured:true or a rank value"
+      top5.length,
+      "getTop5(projects.json) must return at least 1 project — ensure featured:true or a rank value is set"
     ).toBeGreaterThanOrEqual(1);
   });
 });

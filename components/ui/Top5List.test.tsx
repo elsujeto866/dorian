@@ -73,4 +73,19 @@ describe("Top5List", () => {
     render(<Top5List projects={projects} />);
     expect(screen.getByRole("heading", { level: 2 })).toBeInTheDocument();
   });
+
+  it("renders tag chips when a project has tags", () => {
+    const withTags = [
+      makeProject({ id: "tagged", name: "Tagged Project", tags: ["automatización", "SRI"] }),
+    ];
+    render(<Top5List projects={withTags} />);
+    expect(screen.getByText("automatización")).toBeInTheDocument();
+    expect(screen.getByText("SRI")).toBeInTheDocument();
+  });
+
+  it("renders no tag chips when projects have no tags", () => {
+    render(<Top5List projects={projects} />);
+    // Fixture projects have no tags — no tag chip text should appear
+    expect(screen.queryByText("automatización")).toBeNull();
+  });
 });

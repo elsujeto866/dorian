@@ -81,4 +81,18 @@ describe("ProjectCard", () => {
     // Should render a formatted USD string
     expect(screen.getByText(/12\.000.*USD/)).toBeInTheDocument();
   });
+
+  it("renders each tag as a chip when tags are present", () => {
+    const projectWithTags: Project = { ...project, tags: ["automatización", "seguros"] };
+    render(<ProjectCard project={projectWithTags} />);
+    expect(screen.getByText("automatización")).toBeInTheDocument();
+    expect(screen.getByText("seguros")).toBeInTheDocument();
+  });
+
+  it("renders no tag chips when tags array is empty", () => {
+    const projectNoTags: Project = { ...project, tags: [] };
+    render(<ProjectCard project={projectNoTags} />);
+    // The only chips present should be the ROI one; no extra tag spans
+    expect(screen.queryByText("automatización")).toBeNull();
+  });
 });
