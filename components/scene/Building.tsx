@@ -434,6 +434,44 @@ function BuildingLow({ height, footprint, color }: BuildingSimpleProps) {
 
 // ─── Building with LOD ────────────────────────────────────────────────────────
 
+// ─── Proximity glow ring ──────────────────────────────────────────────────────
+
+/**
+ * A pulsing emissive ring at the base of a building that is nearest the player.
+ * Cheap: one plane mesh, one material, one useFrame animation.
+ * Only rendered when the building is the proximity target (isProximate = true).
+ */
+function ProximityGlowRing({ footprint, color }: { footprint: number; color: string }) {
+  const matRef = useRef<THREE.MeshStandardMaterial | null>(null);
+
+  useFrame(({ clock }) => {
+    if (!matRef.current) return;
+    const t = clock.getElapsedTime();
+    // Pulse between 0.8 and 2.2 emissiveIntensity.
+    matRef.current.emissiveIntensity = 1.2 + Math.sin(t * 3.5) * 0.8;
+  });
+
+  const ringColor = new THREE.Color(color);
+
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+      <ringGeometry args={[footprint * 0.7, footprint * 0.85, 20]} />
+      <meshStandardMaterial
+        ref={matRef}
+        color="#000011"
+        emissive={ringColor}
+        emissiveIntensity={1.2}
+        roughness={0.0}
+        transparent
+        opacity={0.85}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+// ─── Building with LOD ────────────────────────────────────────────────────────
+
 interface BuildingProps {
   data: BuildingData;
 }
@@ -441,6 +479,10 @@ interface BuildingProps {
 export function Building({ data }: BuildingProps) {
   const { selectBuilding } = useSceneStore();
   const { id, position, height, footprint, color, isLandmark, waypoint, archetype, tier } = data;
+
+  // Subscribe to proximity state — re-renders only when this specific building's
+  // proximity status changes (shallow equals on primitive string).
+  const isProximate = useSceneStore((s) => s.proximityBuildingId === id);
 
   const handleClick = useCallback(
     (e: ThreeEvent<MouseEvent>) => {
@@ -462,6 +504,11 @@ export function Building({ data }: BuildingProps) {
         document.body.style.cursor = "auto";
       }}
     >
+      {/* Proximity glow ring — only visible when player is near (walk mode) */}
+      {isProximate && (
+        <ProximityGlowRing footprint={footprint} color={color} />
+      )}
+
       {/* Detailed provides automatic LOD switching via distance thresholds */}
       <Detailed distances={[0, 30, 80]}>
         {/* High LOD: full detail with archetype shape + tier-driven glow */}

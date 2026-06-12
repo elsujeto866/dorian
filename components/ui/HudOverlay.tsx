@@ -414,14 +414,20 @@ export function HudOverlay() {
 
   const districts = buildCityLayout(projects, getAllCategories());
 
-  // ESC key returns to overview. V key toggles nav mode.
+  const { toggleNavMode } = useSceneStore();
+
+  // ESC: return to overview. V: toggle walk/fly mode (global shortcut).
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape" && selectedBuildingId) {
         clearSelection();
+        return;
+      }
+      if (e.key === "v" || e.key === "V") {
+        toggleNavMode();
       }
     },
-    [selectedBuildingId, clearSelection]
+    [selectedBuildingId, clearSelection, toggleNavMode]
   );
 
   useEffect(() => {
