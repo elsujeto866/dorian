@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useSceneStore } from "./useSceneStore";
+import { useSceneStore, PLAYER_SPAWN } from "./useSceneStore";
 import type { Waypoint } from "./useSceneStore";
 
 // Reset store state between tests so they stay independent.
@@ -9,6 +9,9 @@ beforeEach(() => {
     cameraTarget: null,
     phase: "loading",
     timeOfDay: "night",
+    navMode: "fly",
+    playerPosition: PLAYER_SPAWN,
+    proximityBuildingId: null,
   });
 });
 
@@ -126,5 +129,61 @@ describe("useSceneStore — toggleTimeOfDay", () => {
   it("is idempotent when called an even number of times", () => {
     for (let i = 0; i < 4; i++) useSceneStore.getState().toggleTimeOfDay();
     expect(useSceneStore.getState().timeOfDay).toBe("night");
+  });
+});
+
+describe("useSceneStore — navMode", () => {
+  it("starts in fly mode", () => {
+    expect(useSceneStore.getState().navMode).toBe("fly");
+  });
+
+  it("setNavMode switches to walk", () => {
+    useSceneStore.getState().setNavMode("walk");
+    expect(useSceneStore.getState().navMode).toBe("walk");
+  });
+
+  it("toggleNavMode switches fly → walk", () => {
+    useSceneStore.getState().toggleNavMode();
+    expect(useSceneStore.getState().navMode).toBe("walk");
+  });
+
+  it("toggleNavMode switches walk → fly", () => {
+    useSceneStore.getState().setNavMode("walk");
+    useSceneStore.getState().toggleNavMode();
+    expect(useSceneStore.getState().navMode).toBe("fly");
+  });
+
+  it("toggleNavMode is idempotent over even cycles", () => {
+    for (let i = 0; i < 4; i++) useSceneStore.getState().toggleNavMode();
+    expect(useSceneStore.getState().navMode).toBe("fly");
+  });
+});
+
+describe("useSceneStore — playerPosition", () => {
+  it("starts at PLAYER_SPAWN", () => {
+    expect(useSceneStore.getState().playerPosition).toEqual(PLAYER_SPAWN);
+  });
+
+  it("setPlayerPosition updates position", () => {
+    const newPos = { x: 10, y: 0, z: -5 };
+    useSceneStore.getState().setPlayerPosition(newPos);
+    expect(useSceneStore.getState().playerPosition).toEqual(newPos);
+  });
+});
+
+describe("useSceneStore — proximityBuildingId", () => {
+  it("starts with no proximity building", () => {
+    expect(useSceneStore.getState().proximityBuildingId).toBeNull();
+  });
+
+  it("setProximityBuildingId sets a building id", () => {
+    useSceneStore.getState().setProximityBuildingId("proj-1");
+    expect(useSceneStore.getState().proximityBuildingId).toBe("proj-1");
+  });
+
+  it("setProximityBuildingId clears to null", () => {
+    useSceneStore.getState().setProximityBuildingId("proj-1");
+    useSceneStore.getState().setProximityBuildingId(null);
+    expect(useSceneStore.getState().proximityBuildingId).toBeNull();
   });
 });
