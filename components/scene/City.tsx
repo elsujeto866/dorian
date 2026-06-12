@@ -41,6 +41,13 @@ import { computeFocusWaypoint } from "./waypoint";
 import type { Vec3 } from "./useSceneStore";
 import { MAYOR_ID } from "./constants";
 import { Walkers } from "./Walkers";
+import {
+  deriveRoadSegments,
+  deriveCarLoops,
+  samplePath,
+  ROAD_WIDTH,
+  SIDEWALK_WIDTH,
+} from "./roadNetwork";
 
 // ─── Mayor statue constants ────────────────────────────────────────────────────
 
@@ -70,22 +77,229 @@ function GroundPlane() {
   );
 }
 
-// ─── Street grid lines ────────────────────────────────────────────────────────
+// ─── Real road network ────────────────────────────────────────────────────────
+
+// Module-level singletons — never recreated per render.
+const ASPHALT_MAT = new THREE.MeshStandardMaterial({
+  color: "#101018",
+  roughness: 0.92,
+  metalness: 0.05,
+  emissive: "#08080f",
+  emissiveIntensity: 0.03,
+});
+const SIDEWALK_MAT = new THREE.MeshStandardMaterial({
+  color: "#1a1a2a",
+  roughness: 0.95,
+  metalness: 0.0,
+  emissive: "#10101c",
+  emissiveIntensity: 0.02,
+});
+const CENTER_DASH_MAT = new THREE.MeshStandardMaterial({
+  color: "#002244",
+  emissive: "#0044aa",
+  emissiveIntensity: 0.55,
+  roughness: 0.1,
+});
 
 /**
- * Emissive street grid — more visible than before, colour-matched to night/day
- * via district accent tones. Grid lines glow faintly so the city feels inhabited.
+ * The road network derived from roadNetwork.ts.
+ *
+ * Renders:
+ *   - Dark asphalt strips for each road segment
+ *   - Lighter sidewalk borders on each side
+ *   - Emissive center-line dashes (instanced, one draw call)
+ *
+ * The city block under buildings is the ground plane (darker than asphalt).
  */
-function StreetGrid() {
-  const gridRef = useRef<THREE.GridHelper | null>(null);
+function RoadNetwork() {
+  const segments = useMemo(() => deriveRoadSegments(), []);
 
-  const grid = useMemo(() => {
-    // Primary lines slightly brighter; secondary lines dark blue.
-    const g = new THREE.GridHelper(160, 48, "#1a1f5e", "#0c1030");
-    return g;
-  }, []);
+  // Pre-compute dash matrices for all segments (instanced, one draw call).
+  const dashMatrices = useMemo(() => {
+    const matrices: THREE.Matrix4[] = [];
+    const dashLen = 2.0;
+    const dashGap = 2.0;
+    const dashStep = dashLen + dashGap;
+    const dummy = new THREE.Object3D();
 
-  return <primitive ref={gridRef} object={grid} position={[0, 0.01, 0]} />;
+    for (const seg of segments) {
+      const numDashes = Math.floor(seg.length / dashStep);
+      for (let d = 0; d < numDashes; d++) {
+        const t = (d + 0.5) / numDashes;
+        const posX = seg.start.x + (seg.end.x - seg.start.x) * t;
+        const posZ = seg.start.z + (seg.end.z - seg.start.z) * t;
+        dummy.position.set(posX, 0.025, posZ);
+
+        if (seg.axis === "x") {
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.set(dashLen, 0.04, 0.1);
+        } else {
+          dummy.rotation.set(0, Math.PI / 2, 0);
+          dummy.scale.set(dashLen, 0.04, 0.1);
+        }
+        dummy.updateMatrix();
+        matrices.push(dummy.matrix.clone());
+      }
+    }
+    return matrices;
+  }, [segments]);
+
+  const dashRef = useRef<THREE.InstancedMesh | null>(null);
+  const setDashRef = useMemo(
+    () => (mesh: THREE.InstancedMesh | null) => {
+      if (!mesh) return;
+      dashRef.current = mesh;
+      dashMatrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+      mesh.instanceMatrix.needsUpdate = true;
+    },
+    [dashMatrices]
+  );
+
+  return (
+    <group>
+      {segments.map((seg, i) => {
+        const isX = seg.axis === "x";
+        const roadW = isX ? seg.length : ROAD_WIDTH;
+        const roadD = isX ? ROAD_WIDTH : seg.length;
+        const swW = isX ? seg.length : ROAD_WIDTH + SIDEWALK_WIDTH * 2;
+        const swD = isX ? ROAD_WIDTH + SIDEWALK_WIDTH * 2 : seg.length;
+
+        return (
+          <group key={i} position={[seg.center.x, 0, seg.center.z]}>
+            {/* Sidewalk border (slightly wider/thicker than road) */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0, 0]} material={SIDEWALK_MAT}>
+              <planeGeometry args={[swW, swD]} />
+            </mesh>
+            {/* Asphalt road surface */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} material={ASPHALT_MAT}>
+              <planeGeometry args={[roadW, roadD]} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* Center-line dashes — one instanced mesh for all segments */}
+      {dashMatrices.length > 0 && (
+        <instancedMesh
+          ref={setDashRef}
+          args={[undefined, undefined, dashMatrices.length]}
+          material={CENTER_DASH_MAT}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+        </instancedMesh>
+      )}
+    </group>
+  );
+}
+
+// ─── Cars ─────────────────────────────────────────────────────────────────────
+
+// Shared car geometry (module-level singletons).
+const CAR_BODY_GEO = new THREE.BoxGeometry(1.8, 0.55, 0.9);
+const CAR_CABIN_GEO = new THREE.BoxGeometry(1.0, 0.45, 0.82);
+const CAR_WHEEL_GEO = new THREE.CylinderGeometry(0.18, 0.18, 0.15, 6);
+const CAR_WHEEL_MAT = new THREE.MeshStandardMaterial({ color: "#111", roughness: 0.9 });
+
+/**
+ * A single low-poly car driving a deterministic seeded loop.
+ *
+ * Geometry: box body + box cabin + 4 cylinder wheels + emissive headlights/taillights.
+ * Animation: useFrame lerp along the precomputed closed polygon path.
+ * Performance: shared geometry singletons; per-car material; no pointLight.
+ */
+function Car({ loop }: { loop: ReturnType<typeof deriveCarLoops>[0] }) {
+  const groupRef = useRef<THREE.Group | null>(null);
+  const tRef = useRef(loop.startT);
+
+  // Base speed: 4 world-units/sec × per-car speed multiplier.
+  const BASE_SPEED = 4.0;
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    tRef.current = (tRef.current + (delta * BASE_SPEED * loop.speed) / 200) % 1;
+    const { position, angle } = samplePath(loop.waypoints, tRef.current);
+    groupRef.current.position.set(position.x, position.y, position.z);
+    groupRef.current.rotation.y = angle;
+  });
+
+  const bodyMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(loop.color).multiplyScalar(0.35),
+        emissive: new THREE.Color(loop.color),
+        emissiveIntensity: 0.18,
+        roughness: 0.55,
+        metalness: 0.4,
+      }),
+    [loop.color]
+  );
+
+  const headlightMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#ffffff",
+        emissive: "#ffffff",
+        emissiveIntensity: 1.8,
+        roughness: 0.05,
+      }),
+    []
+  );
+
+  const taillightMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#330000",
+        emissive: "#ff2200",
+        emissiveIntensity: 1.6,
+        roughness: 0.05,
+      }),
+    []
+  );
+
+  const { position, angle } = samplePath(loop.waypoints, loop.startT);
+
+  return (
+    <group ref={groupRef} position={[position.x, position.y, position.z]} rotation={[0, angle, 0]}>
+      {/* Body */}
+      <mesh position={[0, 0.28, 0]} geometry={CAR_BODY_GEO} material={bodyMat} />
+      {/* Cabin */}
+      <mesh position={[-0.15, 0.72, 0]} geometry={CAR_CABIN_GEO} material={bodyMat} />
+      {/* Headlights (front) */}
+      <mesh position={[0.92, 0.28, 0.28]}>
+        <boxGeometry args={[0.08, 0.15, 0.22]} />
+        <primitive object={headlightMat} attach="material" />
+      </mesh>
+      <mesh position={[0.92, 0.28, -0.28]}>
+        <boxGeometry args={[0.08, 0.15, 0.22]} />
+        <primitive object={headlightMat} attach="material" />
+      </mesh>
+      {/* Taillights (back) */}
+      <mesh position={[-0.92, 0.28, 0.28]}>
+        <boxGeometry args={[0.08, 0.12, 0.2]} />
+        <primitive object={taillightMat} attach="material" />
+      </mesh>
+      <mesh position={[-0.92, 0.28, -0.28]}>
+        <boxGeometry args={[0.08, 0.12, 0.2]} />
+        <primitive object={taillightMat} attach="material" />
+      </mesh>
+      {/* 4 wheels */}
+      {([[-0.55, 0.18, 0.48], [-0.55, 0.18, -0.48], [0.55, 0.18, 0.48], [0.55, 0.18, -0.48]] as [number, number, number][]).map(([x, y, z], wi) => (
+        <mesh key={wi} position={[x, y, z]} rotation={[0, 0, Math.PI / 2]} geometry={CAR_WHEEL_GEO} material={CAR_WHEEL_MAT} />
+      ))}
+    </group>
+  );
+}
+
+/** Spawn all cars on their seeded loop paths. */
+function Cars() {
+  const loops = useMemo(() => deriveCarLoops(), []);
+  return (
+    <>
+      {loops.map((loop) => (
+        <Car key={loop.index} loop={loop} />
+      ))}
+    </>
+  );
 }
 
 // ─── District ground accent (emissive tinted pad under buildings) ─────────────
@@ -670,7 +884,8 @@ export function City() {
   return (
     <group>
       <GroundPlane />
-      <StreetGrid />
+      {/* Road network replaces bare GridHelper — actual road strips + sidewalks + dashes */}
+      <RoadNetwork />
       <StreetlightGrid />
 
       {/* Category districts + buildings (fully data-driven) */}
@@ -699,6 +914,9 @@ export function City() {
 
       {/* Pedestrian walkers with earnings popups */}
       <Walkers buildings={allBuildings} projects={projects} />
+
+      {/* Cars driving deterministic seeded loops along the road network */}
+      <Cars />
     </group>
   );
 }
