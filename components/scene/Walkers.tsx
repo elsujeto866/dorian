@@ -9,8 +9,8 @@
  * Design:
  *   - Capsule/box minifig bodies with seeded neon colors.
  *   - useFrame lerp movement (no physics, no module-scope randomness).
- *   - Earnings popup: Drei Html element — rises & fades via inline style.
- *   - All path / popup logic is in walkers.ts (pure, unit-tested).
+ *   - Earnings popup: Drei Billboard + Text (troika GPU-rendered) — zero DOM nodes.
+ *   - All path / popup logic is in walkerUtils.ts (pure, unit-tested).
  *
  * Re-render strategy:
  *   - Walker positions are updated in a mutable ref every frame (no setState).
@@ -19,15 +19,21 @@
  *     ~2 seconds per walker, not every frame.
  *
  * Performance:
- *   - WALKER_COUNT = 12 (see walkers.ts).
- *   - Each walker = 2 meshes + Html (only when popup active).
- *   - Shared geometry is NOT instanced — counts are small enough.
+ *   - WALKER_COUNT = 12 (see walkerUtils.ts).
+ *   - Each walker = 2 meshes + Billboard+Text (only when popup active, GPU-rendered).
+ *   - No DOM nodes created per walker — Drei Html removed entirely.
+ *   - Shared body geometry/material singletons defined at module level.
  */
 
 import { useRef, useMemo, useEffect, useState, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
+
+// ─── Shared geometry / material singletons (never recreated per render) ────────
+
+const BODY_GEO = new THREE.BoxGeometry(0.28, 0.5, 0.22);
+const HEAD_GEO = new THREE.CylinderGeometry(0.12, 0.12, 0.2, 6);
 import {
   initWalkers,
   nextBuildingIndex,
@@ -86,11 +92,27 @@ function WalkerMesh({
     [buildingId, projectRoi, stateRef]
   );
 
-  const bodyColorHex = useMemo(() => {
+  const bodyMat = useMemo(() => {
     const c = new THREE.Color(neonColor);
     c.multiplyScalar(0.3);
-    return `#${c.getHexString()}`;
+    return new THREE.MeshStandardMaterial({
+      color: c,
+      emissive: new THREE.Color(neonColor),
+      emissiveIntensity: 0.6,
+      roughness: 0.5,
+    });
   }, [neonColor]);
+
+  const headMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color("#f5c87a"),
+        emissive: new THREE.Color("#aa7700"),
+        emissiveIntensity: 0.15,
+        roughness: 0.4,
+      }),
+    []
+  );
 
   // Compute opacity: rises then fades over POPUP_DURATION.
   const popupOpacity = useMemo(() => {
@@ -103,46 +125,26 @@ function WalkerMesh({
 
   return (
     <group ref={groupRef} position={[stateRef.current.position.x, 0, stateRef.current.position.z]}>
-      {/* Body — small LEGO-style box */}
-      <mesh position={[0, 0.55, 0]}>
-        <boxGeometry args={[0.28, 0.5, 0.22]} />
-        <meshStandardMaterial
-          color={bodyColorHex}
-          emissive={neonColor}
-          emissiveIntensity={0.6}
-          roughness={0.5}
-        />
-      </mesh>
-      {/* Head — tiny cylinder */}
-      <mesh position={[0, 1.0, 0]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.2, 6]} />
-        <meshStandardMaterial
-          color="#f5c87a"
-          emissive="#aa7700"
-          emissiveIntensity={0.15}
-          roughness={0.4}
-        />
-      </mesh>
+      {/* Body — small LEGO-style box (shared singleton geometry, per-walker material) */}
+      <mesh position={[0, 0.55, 0]} geometry={BODY_GEO} material={bodyMat} />
+      {/* Head — tiny cylinder (shared singleton geometry) */}
+      <mesh position={[0, 1.0, 0]} geometry={HEAD_GEO} material={headMat} />
 
-      {/* Earnings popup — only mounted when active */}
+      {/* Earnings popup — GPU Billboard+Text, zero DOM nodes */}
       {popupActive && popupOpacity > 0.04 && (
-        <Html position={[0, popupY, 0]} center>
-          <div
-            style={{
-              pointerEvents: "none",
-              fontSize: "11px",
-              fontWeight: "700",
-              fontFamily: "monospace",
-              color: neonColor,
-              textShadow: `0 0 6px ${neonColor}`,
-              opacity: popupOpacity,
-              whiteSpace: "nowrap",
-              userSelect: "none",
-            }}
+        <Billboard position={[0, popupY, 0]}>
+          <Text
+            fontSize={0.28}
+            color={neonColor}
+            anchorX="center"
+            anchorY="middle"
+            fillOpacity={popupOpacity}
+            outlineWidth={0.012}
+            outlineColor="#000000"
           >
             {earningsLabel}
-          </div>
-        </Html>
+          </Text>
+        </Billboard>
       )}
     </group>
   );

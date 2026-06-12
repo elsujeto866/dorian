@@ -200,12 +200,9 @@ function MayorStatue() {
         <meshStandardMaterial color="#f5c87a" roughness={0.4} />
       </mesh>
 
-      {/* Key light from front — gives the statue a readable silhouette */}
-      <pointLight position={[0, 8, 4]} intensity={3.5} color="#aaaaff" distance={18} />
-      {/* Rim light from behind — separates statue from background */}
-      <pointLight position={[0, 5, -4]} intensity={2.0} color="#00eaff" distance={14} />
-      {/* Fill light low from side — catches arm detail */}
-      <pointLight position={[-4, 3, 0]} intensity={1.5} color="#6666ff" distance={12} />
+      {/* Single focused spot for the statue — emissive materials handle colour. */}
+      {/* Consolidated from 3 lights → 1 to stay within scene light budget. */}
+      <pointLight position={[0, 8, 3]} intensity={3.0} color="#8888ff" distance={20} />
     </group>
   );
 }
@@ -267,8 +264,8 @@ function MitadDelMundo() {
         />
       </mesh>
 
-      {/* Monument point light */}
-      <pointLight position={[0, 12, 0]} intensity={3} color="#00ff88" distance={30} />
+      {/* Monument glow — emissive materials handle the green; 1 cheap accent only */}
+      <pointLight position={[0, 12, 0]} intensity={1.5} color="#00ff88" distance={20} />
     </group>
   );
 }
@@ -349,8 +346,8 @@ function QuitoColonialCluster() {
         </mesh>
       </group>
 
-      {/* Colonial cluster point light */}
-      <pointLight position={[4, 12, 1]} intensity={2} color="#cc44ff" distance={25} />
+      {/* Colonial cluster — emissive purple materials glow well; 1 reduced accent */}
+      <pointLight position={[4, 12, 1]} intensity={1.0} color="#cc44ff" distance={18} />
     </group>
   );
 }
@@ -373,21 +370,27 @@ function DistrictMarker({ center, color }: { center: Vec3; color: string }) {
 
 // ─── Streetlights ─────────────────────────────────────────────────────────────
 
-/** A neon streetlight post at a given position. */
+// Streetlight shared geometry (module-level singleton — never recreated)
+const STREETLIGHT_POST_GEO = new THREE.BoxGeometry(0.15, 5, 0.15);
+const STREETLIGHT_HEAD_GEO = new THREE.BoxGeometry(0.6, 0.3, 0.6);
+const STREETLIGHT_POST_MAT = new THREE.MeshStandardMaterial({ color: "#111", roughness: 0.8 });
+
+/**
+ * A neon streetlight post — emissive lamp head only, no point light per post.
+ * The scene-level district accent lights provide illumination; individual post
+ * point lights multiply the light count by 24+ and kill performance.
+ */
 function Streetlight({ position, color }: { position: Vec3; color: string }) {
+  const headMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#000", emissive: color, emissiveIntensity: 1.5, roughness: 0.0 }),
+    [color]
+  );
   return (
     <group position={[position.x, position.y, position.z]}>
       {/* Post */}
-      <mesh position={[0, 2.5, 0]}>
-        <boxGeometry args={[0.15, 5, 0.15]} />
-        <meshStandardMaterial color="#111" roughness={0.8} />
-      </mesh>
-      {/* Lamp head */}
-      <mesh position={[0, 5.2, 0]}>
-        <boxGeometry args={[0.6, 0.3, 0.6]} />
-        <meshStandardMaterial color="#000" emissive={color} emissiveIntensity={1.5} roughness={0.0} />
-      </mesh>
-      <pointLight position={[0, 5, 0]} intensity={0.8} color={color} distance={12} />
+      <mesh position={[0, 2.5, 0]} geometry={STREETLIGHT_POST_GEO} material={STREETLIGHT_POST_MAT} />
+      {/* Lamp head — emissive only, no pointLight */}
+      <mesh position={[0, 5.2, 0]} geometry={STREETLIGHT_HEAD_GEO} material={headMat} />
     </group>
   );
 }

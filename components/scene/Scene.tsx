@@ -144,35 +144,29 @@ function SceneInternals({ onDprChange }: SceneInternalsProps) {
         <fog attach="fog" args={["#0a0a28", 70, 250]} />
       )}
 
-      {/* ── Lighting — switches between night and day ── */}
+      {/* ── Lighting — capped at ambient + 1 directional + max 3 point accents ── */}
+      {/* Emissive materials carry all colour; real lights only for depth readability. */}
       {isDay ? (
         <>
-          {/* Day: bright warm Andean sky lighting */}
-          <ambientLight intensity={1.2} color="#ffe8c8" />
+          {/* Day: bright warm Andean sky — ambient does most of the work */}
+          <ambientLight intensity={1.4} color="#ffe8c8" />
           <directionalLight position={[30, 60, 20]} intensity={3.5} color="#fff5e0" />
-          {/* Fill from opposite side — sky bounce */}
-          <directionalLight position={[-20, 30, -20]} intensity={0.8} color="#bbd8ff" />
-          {/* Soft district fill — dimmed neon, still present for readability */}
-          <pointLight position={[-30, 15, -20]} intensity={0.5} color="#00eaff" distance={60} />
-          <pointLight position={[30, 12, 20]} intensity={0.5} color="#22c55e" distance={50} />
-          <pointLight position={[5, 18, 35]} intensity={0.5} color="#f59e0b" distance={55} />
+          {/* Single sky-bounce fill — replaces the 2nd directional + 3 point lights */}
+          <hemisphereLight args={["#bbd8ff", "#c8a060", 0.6]} />
         </>
       ) : (
         <>
-          {/* Night: elevated ambient so geometry reads; moonlight blue key */}
-          <ambientLight intensity={0.35} color="#1a1a3a" />
+          {/* Night: elevated ambient keeps geometry readable without extra lights. */}
+          {/* emissive materials (windows, signs, ground accents) carry the colour. */}
+          <ambientLight intensity={0.55} color="#1a1a3a" />
           <directionalLight position={[20, 40, 20]} intensity={0.7} color="#4455aa" />
-          {/* Neon accent point lights — simulate city glow */}
-          <pointLight position={[-30, 15, -20]} intensity={2.5} color="#00eaff" distance={60} />
-          <pointLight position={[30, 12, 20]} intensity={2.0} color="#22c55e" distance={50} />
-          <pointLight position={[5, 18, 35]} intensity={2.0} color="#f59e0b" distance={55} />
-          <pointLight position={[0, 20, 0]} intensity={2.5} color="#6666ff" distance={40} />
-          {/* District fill lights — ensure building faces catch color */}
-          <pointLight position={[-22, 8, -16]} intensity={1.2} color="#00eaff" distance={35} />
-          <pointLight position={[22, 8, 16]} intensity={1.0} color="#22c55e" distance={35} />
-          <pointLight position={[0, 8, 28]} intensity={1.0} color="#f59e0b" distance={30} />
-          {/* Drei Stars — visible night sky (not pure black) */}
-          <Stars radius={120} depth={40} count={2000} factor={4} saturation={0.5} fade />
+          {/* 3 wide-radius accent point lights — one per district colour. */}
+          {/* distance kept high so they light entire districts at once. */}
+          <pointLight position={[-22, 18, -16]} intensity={3.0} color="#00eaff" distance={80} />
+          <pointLight position={[22, 14, 16]} intensity={2.5} color="#22c55e" distance={70} />
+          <pointLight position={[0, 20, 30]} intensity={2.5} color="#f59e0b" distance={70} />
+          {/* Drei Stars — visible night sky */}
+          <Stars radius={120} depth={40} count={1500} factor={4} saturation={0.5} fade />
         </>
       )}
 
