@@ -3,8 +3,8 @@
  *
  * Pure, deterministic city layout algorithm.
  *
- * Derives building positions, dimensions, and waypoints from data (projects +
- * categories) without any random state at module scope.
+ * Derives building positions, dimensions, shape archetypes, and waypoints
+ * from data (projects + categories) without any random state at module scope.
  *
  * Rules:
  *   - Each category maps to a district positioned on a circle around the origin.
@@ -12,6 +12,14 @@
  *     index within the category (no Math.random — seeded pseudo-random).
  *   - Building height scales with roi.amountUsd: taller = higher ROI.
  *   - Top 5 / ranked projects get landmark-scale dimensions.
+ *   - Building shape (archetype) derives from categoryId + sector — see buildingArchetypes.ts.
+ *   - Visual detail tier (glow, rooftop props) derives from ROI + rank.
+ *
+ * "The city grows with the portfolio data":
+ *   - Adding a project to projects.json automatically adds a building with the
+ *     correct shape, height, glow, and district — zero code changes required.
+ *   - Higher-ROI projects produce taller, brighter buildings in prestige tiers.
+ *   - A district's footprint (number of buildings) grows as more projects are added.
  *
  * All functions are pure → unit-testable without a canvas.
  */
