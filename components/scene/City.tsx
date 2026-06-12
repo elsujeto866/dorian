@@ -865,6 +865,176 @@ function Pets() {
   );
 }
 
+// ─── El Panecillo ─────────────────────────────────────────────────────────────
+
+/**
+ * El Panecillo: iconic green hill at the south end of the city with a
+ * stylised LEGO-blocky Virgen de Quito on a pedestal.
+ *
+ * Hill: smooth low-poly cone. Statue: cone/box dress, simple wings (flat boxes),
+ * sphere head on a cylinder neck, emissive aluminium-white glow.
+ * Light budget: no new point lights — emissive rim handles the "uplighting" look.
+ *
+ * Positioned to the south (negative Z) so it anchors the city's horizon line.
+ */
+function ElPanecillo() {
+  return (
+    <group position={[0, 0, -85]}>
+      {/* Hill — faceted low-poly green cone */}
+      <mesh position={[0, 0, 0]}>
+        <coneGeometry args={[22, 18, 10]} />
+        <meshStandardMaterial
+          color="#1a3d0a"
+          emissive="#0d2205"
+          emissiveIntensity={0.12}
+          roughness={0.92}
+          flatShading
+        />
+      </mesh>
+      {/* Lighter top cap — hilltop clearing */}
+      <mesh position={[0, 8.5, 0]}>
+        <coneGeometry args={[6, 4, 8]} />
+        <meshStandardMaterial color="#2a5010" roughness={0.9} flatShading />
+      </mesh>
+
+      {/* ── Statue on hilltop ── */}
+      <group position={[0, 12, 0]}>
+        {/* Pedestal */}
+        <mesh position={[0, 1.0, 0]}>
+          <boxGeometry args={[2.5, 2.0, 2.5]} />
+          <meshStandardMaterial
+            color="#c0c0d0"
+            emissive="#8888cc"
+            emissiveIntensity={0.25}
+            roughness={0.4}
+            metalness={0.3}
+          />
+        </mesh>
+        {/* Dress / body — tapered cone (LEGO blocky) */}
+        <mesh position={[0, 4.0, 0]}>
+          <coneGeometry args={[1.1, 4.0, 6]} />
+          <meshStandardMaterial
+            color="#e8e8f0"
+            emissive="#aaaaff"
+            emissiveIntensity={0.4}
+            roughness={0.3}
+            metalness={0.2}
+          />
+        </mesh>
+        {/* Torso / chest box above dress */}
+        <mesh position={[0, 6.5, 0]}>
+          <boxGeometry args={[0.9, 1.2, 0.6]} />
+          <meshStandardMaterial
+            color="#f0f0ff"
+            emissive="#ccccff"
+            emissiveIntensity={0.35}
+            roughness={0.3}
+          />
+        </mesh>
+        {/* Head — sphere */}
+        <mesh position={[0, 7.8, 0]}>
+          <sphereGeometry args={[0.5, 8, 6]} />
+          <meshStandardMaterial
+            color="#f5c87a"
+            emissive="#ffaa44"
+            emissiveIntensity={0.2}
+            roughness={0.5}
+          />
+        </mesh>
+        {/* Crown / halo — thin torus */}
+        <mesh position={[0, 8.4, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.55, 0.06, 6, 16]} />
+          <meshStandardMaterial
+            color="#ffee44"
+            emissive="#ffcc00"
+            emissiveIntensity={1.2}
+            roughness={0.05}
+          />
+        </mesh>
+        {/* Left wing — flat box at angle */}
+        <mesh position={[-1.4, 6.2, 0]} rotation={[0, 0, Math.PI / 5]}>
+          <boxGeometry args={[2.8, 0.15, 0.8]} />
+          <meshStandardMaterial
+            color="#d0d8ff"
+            emissive="#8899ff"
+            emissiveIntensity={0.5}
+            roughness={0.2}
+          />
+        </mesh>
+        {/* Right wing */}
+        <mesh position={[1.4, 6.2, 0]} rotation={[0, 0, -Math.PI / 5]}>
+          <boxGeometry args={[2.8, 0.15, 0.8]} />
+          <meshStandardMaterial
+            color="#d0d8ff"
+            emissive="#8899ff"
+            emissiveIntensity={0.5}
+            roughness={0.2}
+          />
+        </mesh>
+        {/* Emissive rim "uplight" on pedestal face — no extra real light needed */}
+        <mesh position={[0, 0.5, 1.3]}>
+          <boxGeometry args={[2.2, 0.08, 0.04]} />
+          <meshStandardMaterial
+            color="#000022"
+            emissive="#aaaaff"
+            emissiveIntensity={1.8}
+            roughness={0.0}
+          />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+// ─── Guagua Pichincha backdrop ────────────────────────────────────────────────
+
+/**
+ * Guagua Pichincha: low-poly mountain ridge silhouetted behind the city.
+ *
+ * Design: 3-5 large faceted cone/ridge shapes arranged at the horizon.
+ * Dark blue-grey at night, green-brown by day. Positioned beyond fog (z > 160)
+ * so it silhouettes without fogging out completely.
+ *
+ * Budget: each peak is a simple coneGeometry with flatShading — < 200 triangles total.
+ */
+function GuaguaPichincha() {
+  const peaks: Array<{ x: number; z: number; r: number; h: number; sides: number }> = [
+    { x: -55, z: 160, r: 40, h: 55, sides: 7 },  // Main volcanic cone (left)
+    { x: 20, z: 175, r: 30, h: 40, sides: 6 },   // Secondary peak (center-right)
+    { x: 80, z: 165, r: 35, h: 45, sides: 5 },   // Right flank
+    { x: -110, z: 155, r: 28, h: 32, sides: 6 }, // Far left ridge
+    { x: 130, z: 170, r: 22, h: 28, sides: 5 },  // Far right ridge
+  ];
+
+  return (
+    <group>
+      {peaks.map((p, i) => (
+        <mesh key={i} position={[p.x, -2, p.z]}>
+          <coneGeometry args={[p.r, p.h, p.sides]} />
+          <meshStandardMaterial
+            color="#1a2235"
+            emissive="#0a0f1a"
+            emissiveIntensity={0.08}
+            roughness={0.95}
+            flatShading
+          />
+        </mesh>
+      ))}
+      {/* Snow cap on main peak */}
+      <mesh position={[-55, 48, 160]}>
+        <coneGeometry args={[8, 12, 6]} />
+        <meshStandardMaterial
+          color="#ccd8ee"
+          emissive="#8899cc"
+          emissiveIntensity={0.15}
+          roughness={0.7}
+          flatShading
+        />
+      </mesh>
+    </group>
+  );
+}
+
 // ─── City root ────────────────────────────────────────────────────────────────
 
 export function City() {
@@ -905,6 +1075,10 @@ export function City() {
       {/* Ecuador landmarks (decorative) */}
       <MitadDelMundo />
       <QuitoColonialCluster />
+
+      {/* Quito identity landmarks — El Panecillo hill + Guagua Pichincha backdrop */}
+      <ElPanecillo />
+      <GuaguaPichincha />
 
       {/* Traffic lights at street intersections */}
       <TrafficLights />
