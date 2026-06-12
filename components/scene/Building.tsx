@@ -27,6 +27,7 @@ import * as THREE from "three";
 import { Detailed } from "@react-three/drei";
 import { useSceneStore } from "./useSceneStore";
 import type { BuildingData } from "./cityLayout";
+import { glowIntensityFor, rooftopPropsEnabled } from "./buildingArchetypes";
 
 // ─── Window grid constants ────────────────────────────────────────────────────
 
@@ -97,6 +98,194 @@ function useNeonFlicker(
   });
 }
 
+// ─── Archetype shape components ───────────────────────────────────────────────
+
+/**
+ * Stadium archetype: elliptical bowl ring + green pitch + tiny floodlight masts.
+ * Used for sports/fútbol projects.
+ */
+function StadiumShape({ footprint, color }: { footprint: number; color: string }) {
+  const bowlH = footprint * 0.35;
+  const neonColor = new THREE.Color(color);
+  const darkColor = neonColor.clone().multiplyScalar(0.2);
+  return (
+    <group>
+      {/* Outer bowl ring */}
+      <mesh position={[0, bowlH / 2, 0]}>
+        <cylinderGeometry args={[footprint * 0.55, footprint * 0.65, bowlH, 12, 1, true]} />
+        <meshStandardMaterial
+          color={darkColor}
+          emissive={neonColor}
+          emissiveIntensity={0.5}
+          side={THREE.DoubleSide}
+          roughness={0.5}
+        />
+      </mesh>
+      {/* Pitch — green rectangle */}
+      <mesh position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[footprint * 0.7, footprint * 0.5]} />
+        <meshStandardMaterial color="#1a5c0a" emissive="#0a3005" emissiveIntensity={0.25} roughness={0.9} />
+      </mesh>
+      {/* 4 corner floodlight masts */}
+      {([[-1, -1], [-1, 1], [1, -1], [1, 1]] as [number, number][]).map(([sx, sz], i) => (
+        <group key={i} position={[sx * footprint * 0.45, 0, sz * footprint * 0.35]}>
+          <mesh position={[0, bowlH * 0.9, 0]}>
+            <boxGeometry args={[0.15, bowlH * 1.8, 0.15]} />
+            <meshStandardMaterial color="#222" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, bowlH * 1.85, 0]}>
+            <boxGeometry args={[0.6, 0.15, 0.35]} />
+            <meshStandardMaterial color="#fff" emissive={color} emissiveIntensity={1.5} roughness={0.1} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Pitch archetype: flat rectangular pitch + goal frame (smaller sports app).
+ * Used for sports-booking / cancha reservation projects.
+ */
+function PitchShape({ footprint, color }: { footprint: number; color: string }) {
+  const neonColor = new THREE.Color(color);
+  const darkColor = neonColor.clone().multiplyScalar(0.2);
+  return (
+    <group>
+      {/* Low boundary wall */}
+      <mesh position={[0, 0.3, 0]}>
+        <boxGeometry args={[footprint, 0.6, footprint * 0.75]} />
+        <meshStandardMaterial color={darkColor} emissive={neonColor} emissiveIntensity={0.35} roughness={0.6} />
+      </mesh>
+      {/* Pitch surface */}
+      <mesh position={[0, 0.62, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[footprint * 0.85, footprint * 0.6]} />
+        <meshStandardMaterial color="#1a5c0a" emissive="#0a3005" emissiveIntensity={0.2} roughness={0.9} />
+      </mesh>
+      {/* Goal frames (both ends) */}
+      {([-1, 1] as number[]).map((side, i) => (
+        <group key={i} position={[0, 0.6, side * footprint * 0.38]}>
+          <mesh position={[0, 0.5, 0]}>
+            <boxGeometry args={[footprint * 0.35, 1.0, 0.12]} />
+            <meshStandardMaterial color="#fff" emissive={color} emissiveIntensity={1.2} roughness={0.1} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Doc-stack archetype: tower of stacked "paper sheet" offset slabs + neon checkmark sign.
+ * Used for documentation, certification, and process-automation projects.
+ */
+function DocStackShape({ height, footprint, color }: { height: number; footprint: number; color: string }) {
+  const neonColor = new THREE.Color(color);
+  const numSheets = Math.max(3, Math.floor(height / 3));
+  const sheetH = height / numSheets;
+  const darkColor = neonColor.clone().multiplyScalar(0.15);
+
+  return (
+    <group>
+      {Array.from({ length: numSheets }, (_, i) => {
+        // Alternate slight X-offset so stacks look like fanned paper
+        const xOffset = ((i % 2) - 0.5) * 0.25;
+        return (
+          <mesh key={i} position={[xOffset, i * sheetH + sheetH / 2, 0]}>
+            <boxGeometry args={[footprint, sheetH * 0.85, footprint * 0.7]} />
+            <meshStandardMaterial
+              color={darkColor}
+              emissive={neonColor}
+              emissiveIntensity={0.2 + (i / numSheets) * 0.25}
+              roughness={0.4}
+              metalness={0.3}
+            />
+          </mesh>
+        );
+      })}
+      {/* Neon checkmark/seal on the top sheet */}
+      <mesh position={[0, height + 0.4, footprint * 0.36]}>
+        <boxGeometry args={[footprint * 0.6, 0.25, 0.06]} />
+        <meshStandardMaterial color="#001100" emissive={color} emissiveIntensity={2.0} roughness={0.0} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * Coin-stack archetype: stack of cylinders (coins/receipt roll).
+ * Used for billing/facturación projects.
+ */
+function CoinStackShape({ height, footprint, color }: { height: number; footprint: number; color: string }) {
+  const neonColor = new THREE.Color(color);
+  const numCoins = Math.max(3, Math.floor(height / 2));
+  const coinH = height / numCoins;
+  const darkColor = neonColor.clone().multiplyScalar(0.2);
+
+  return (
+    <group>
+      {Array.from({ length: numCoins }, (_, i) => (
+        <mesh key={i} position={[0, i * coinH + coinH / 2, 0]}>
+          <cylinderGeometry args={[footprint * 0.45, footprint * 0.45, coinH * 0.7, 10]} />
+          <meshStandardMaterial
+            color={darkColor}
+            emissive={neonColor}
+            emissiveIntensity={0.3 + (i / numCoins) * 0.3}
+            roughness={0.35}
+            metalness={0.5}
+          />
+        </mesh>
+      ))}
+      {/* $ sign on top coin */}
+      <mesh position={[0, height + 0.25, 0]}>
+        <cylinderGeometry args={[footprint * 0.25, footprint * 0.25, 0.2, 8]} />
+        <meshStandardMaterial color="#001100" emissive={color} emissiveIntensity={2.0} roughness={0.0} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * Warehouse archetype: flat-topped box building with neon shelf stripe windows.
+ * Used for inventory/CRM/management projects.
+ */
+function WarehouseShape({ height, footprint, color }: { height: number; footprint: number; color: string }) {
+  const neonColor = new THREE.Color(color);
+  const darkColor = neonColor.clone().multiplyScalar(0.15);
+  const numStripes = Math.max(2, Math.floor(height / 3));
+
+  return (
+    <group>
+      {/* Main wide body */}
+      <mesh position={[0, height / 2, 0]}>
+        <boxGeometry args={[footprint * 1.4, height, footprint * 0.8]} />
+        <meshStandardMaterial
+          color={darkColor}
+          emissive={neonColor}
+          emissiveIntensity={0.2}
+          roughness={0.7}
+          metalness={0.2}
+        />
+      </mesh>
+      {/* Neon shelf stripes across the facade */}
+      {Array.from({ length: numStripes }, (_, i) => {
+        const yPos = ((i + 0.5) / numStripes) * height;
+        return (
+          <mesh key={i} position={[0, yPos, footprint * 0.41]}>
+            <boxGeometry args={[footprint * 1.35, 0.12, 0.06]} />
+            <meshStandardMaterial
+              color="#000011"
+              emissive={neonColor}
+              emissiveIntensity={1.0}
+              roughness={0.0}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
 // ─── Building body (high LOD) ─────────────────────────────────────────────────
 
 interface BuildingHighProps {
@@ -105,9 +294,11 @@ interface BuildingHighProps {
   color: string;
   isLandmark: boolean;
   id: string;
+  archetype: BuildingData["archetype"];
+  tier: BuildingData["tier"];
 }
 
-function BuildingHigh({ height, footprint, color, isLandmark, id }: BuildingHighProps) {
+function BuildingHigh({ height, footprint, color, isLandmark, id, archetype, tier }: BuildingHighProps) {
   const bodyMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
   const { matrices, windowColor } = useWindowMatrices(height, footprint, color);
 
@@ -115,7 +306,6 @@ function BuildingHigh({ height, footprint, color, isLandmark, id }: BuildingHigh
 
   const windowRef = useRef<THREE.InstancedMesh | null>(null);
 
-  // Set window instance matrices on mount.
   const setWindowInstances = useCallback(
     (mesh: THREE.InstancedMesh | null) => {
       if (!mesh) return;
@@ -127,36 +317,63 @@ function BuildingHigh({ height, footprint, color, isLandmark, id }: BuildingHigh
   );
 
   const neonColor = new THREE.Color(color);
-  // Slightly darker base body color.
   const bodyColor = neonColor.clone().multiplyScalar(0.25);
+  // Glow intensity scales with detail tier — city literally brightens with ROI.
+  const emissiveIntensity = glowIntensityFor(tier);
+  const hasRooftopProps = rooftopPropsEnabled(tier);
 
+  // Non-tower archetypes use their own shape; tower archetype uses the standard body.
+  if (archetype === "stadium") {
+    return <StadiumShape footprint={footprint} color={color} />;
+  }
+  if (archetype === "pitch") {
+    return <PitchShape footprint={footprint} color={color} />;
+  }
+  if (archetype === "doc-stack") {
+    return <DocStackShape height={height} footprint={footprint} color={color} />;
+  }
+  if (archetype === "coin-stack") {
+    return <CoinStackShape height={height} footprint={footprint} color={color} />;
+  }
+  if (archetype === "warehouse") {
+    return <WarehouseShape height={height} footprint={footprint} color={color} />;
+  }
+
+  // Default: tower archetype with tier-driven glow + optional rooftop props.
   return (
     <group>
       {/* Main building body */}
       <mesh position={[0, height / 2, 0]} castShadow={false} receiveShadow={false}>
-        {/* Slightly non-uniform scale gives a chunky/LEGO feel */}
         <boxGeometry args={[footprint * 0.95, height, footprint * 0.95]} />
         <meshStandardMaterial
           ref={bodyMatRef}
           color={bodyColor}
           emissive={neonColor}
-          emissiveIntensity={isLandmark ? 0.8 : 0.35}
+          emissiveIntensity={emissiveIntensity}
           roughness={0.6}
           metalness={0.4}
         />
       </mesh>
 
-      {/* Rooftop cap — flat LEGO stud-style layer */}
+      {/* Rooftop cap */}
       <mesh position={[0, height + 0.2, 0]}>
         <boxGeometry args={[footprint, 0.4, footprint]} />
         <meshStandardMaterial
           color={bodyColor}
           emissive={neonColor}
-          emissiveIntensity={isLandmark ? 1.0 : 0.5}
+          emissiveIntensity={emissiveIntensity * 1.3}
           roughness={0.4}
           metalness={0.5}
         />
       </mesh>
+
+      {/* Rooftop antenna — tier 2+ buildings only */}
+      {hasRooftopProps && (
+        <mesh position={[0, height + 1.6, 0]}>
+          <boxGeometry args={[0.12, 2.4, 0.12]} />
+          <meshStandardMaterial color="#111" emissive={color} emissiveIntensity={1.0} roughness={0.3} />
+        </mesh>
+      )}
 
       {/* Windows — instanced mesh for efficiency */}
       {matrices.length > 0 && (
@@ -180,7 +397,13 @@ function BuildingHigh({ height, footprint, color, isLandmark, id }: BuildingHigh
 
 // ─── Building body (medium LOD) ───────────────────────────────────────────────
 
-function BuildingMed({ height, footprint, color }: Omit<BuildingHighProps, "isLandmark" | "id">) {
+interface BuildingSimpleProps {
+  height: number;
+  footprint: number;
+  color: string;
+}
+
+function BuildingMed({ height, footprint, color }: BuildingSimpleProps) {
   const neonColor = new THREE.Color(color);
   const bodyColor = neonColor.clone().multiplyScalar(0.25);
 
@@ -200,7 +423,7 @@ function BuildingMed({ height, footprint, color }: Omit<BuildingHighProps, "isLa
 
 // ─── Building body (low LOD) ──────────────────────────────────────────────────
 
-function BuildingLow({ height, footprint, color }: Omit<BuildingHighProps, "isLandmark" | "id">) {
+function BuildingLow({ height, footprint, color }: BuildingSimpleProps) {
   return (
     <mesh position={[0, height / 2, 0]}>
       <boxGeometry args={[footprint, height, footprint]} />
@@ -217,7 +440,7 @@ interface BuildingProps {
 
 export function Building({ data }: BuildingProps) {
   const { selectBuilding } = useSceneStore();
-  const { id, position, height, footprint, color, isLandmark, waypoint } = data;
+  const { id, position, height, footprint, color, isLandmark, waypoint, archetype, tier } = data;
 
   const handleClick = useCallback(
     (e: ThreeEvent<MouseEvent>) => {
@@ -241,13 +464,15 @@ export function Building({ data }: BuildingProps) {
     >
       {/* Detailed provides automatic LOD switching via distance thresholds */}
       <Detailed distances={[0, 30, 80]}>
-        {/* High LOD: full detail with windows */}
+        {/* High LOD: full detail with archetype shape + tier-driven glow */}
         <BuildingHigh
           height={height}
           footprint={footprint}
           color={color}
           isLandmark={isLandmark}
           id={id}
+          archetype={archetype ?? "tower"}
+          tier={tier ?? 0}
         />
         {/* Medium LOD: body only, no windows */}
         <BuildingMed height={height} footprint={footprint} color={color} />

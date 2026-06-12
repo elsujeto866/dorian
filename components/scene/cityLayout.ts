@@ -20,6 +20,8 @@ import type { Project, Category } from "@/lib/content/types";
 import type { Vec3 } from "./useSceneStore";
 import { computeFocusWaypoint } from "./waypoint";
 import type { Waypoint } from "./useSceneStore";
+import { archetypeFor, detailTierFor } from "./buildingArchetypes";
+import type { ArchetypeId } from "./buildingArchetypes";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -78,6 +80,12 @@ export interface BuildingData {
   waypoint: Waypoint;
   /** District index this building belongs to. */
   districtIndex: number;
+  /** Shape archetype derived from category + sector. */
+  archetype: ArchetypeId;
+  /** Visual detail tier (0=base, 1=enhanced, 2=landmark, 3=prestige). */
+  tier: 0 | 1 | 2 | 3;
+  /** Project sector — forwarded from data for HUD display. */
+  sector: string;
 }
 
 export interface DistrictData {
@@ -213,6 +221,9 @@ export function buildCityLayout(
         { distance: 14, elevationOffset: 3 }
       );
 
+      const archetype = archetypeFor(category.id, project.sector ?? "").id;
+      const tier = detailTierFor(project.roi.amountUsd, project.rank);
+
       return {
         id: project.id,
         position,
@@ -222,6 +233,9 @@ export function buildCityLayout(
         isLandmark,
         waypoint,
         districtIndex: categoryIndex,
+        archetype,
+        tier,
+        sector: project.sector ?? "",
       };
     });
 
