@@ -12,7 +12,7 @@ import {
   CITY_HALF_EXTENT,
   CAM_FOLLOW_DIST,
   CAM_FOLLOW_HEIGHT,
-} from "./walkController";
+} from "./walkMath";
 import type { BuildingData } from "./cityLayout";
 
 // ─── Minimal building fixture ─────────────────────────────────────────────────

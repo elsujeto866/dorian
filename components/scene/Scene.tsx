@@ -31,6 +31,7 @@ import { OrbitControls, PerformanceMonitor, Sparkles, Stars } from "@react-three
 import * as THREE from "three";
 import { CameraRig } from "./CameraRig";
 import { City } from "./City";
+import { WalkController } from "./WalkController";
 import { useSceneStore } from "./useSceneStore";
 import { HOME_WAYPOINT } from "./waypoint";
 
@@ -120,8 +121,9 @@ interface SceneInternalsProps {
 }
 
 function SceneInternals({ onDprChange }: SceneInternalsProps) {
-  const { setPhase, timeOfDay } = useSceneStore();
+  const { setPhase, timeOfDay, navMode } = useSceneStore();
   const isDay = timeOfDay === "day";
+  const isWalk = navMode === "walk";
 
   // Set overview phase once scene mounts.
   useEffect(() => {
@@ -178,22 +180,25 @@ function SceneInternals({ onDprChange }: SceneInternalsProps) {
         <City />
       </Suspense>
 
-      {/* Camera rig — click-to-fly rails */}
-      <CameraRig />
+      {/* Walk mode: character controller + follow camera (replaces CameraRig + OrbitControls) */}
+      {isWalk && <WalkController />}
 
-      {/* OrbitControls for free-look between flights */}
-      <OrbitControls
-        enableDamping
-        dampingFactor={0.08}
-        minPolarAngle={0.15}      // Can't go underground
-        maxPolarAngle={Math.PI / 2.1}
-        minDistance={5}
-        maxDistance={120}
-        enablePan={false}          // No panning — keeps users anchored to city
-        rotateSpeed={0.5}
-        zoomSpeed={0.8}
-        makeDefault={false}        // CameraRig takes precedence during flight
-      />
+      {/* Fly mode: camera rig click-to-fly + OrbitControls free-look */}
+      {!isWalk && <CameraRig />}
+      {!isWalk && (
+        <OrbitControls
+          enableDamping
+          dampingFactor={0.08}
+          minPolarAngle={0.15}      // Can't go underground
+          maxPolarAngle={Math.PI / 2.1}
+          minDistance={5}
+          maxDistance={120}
+          enablePan={false}          // No panning — keeps users anchored to city
+          rotateSpeed={0.5}
+          zoomSpeed={0.8}
+          makeDefault={false}        // CameraRig takes precedence during flight
+        />
+      )}
     </>
   );
 }

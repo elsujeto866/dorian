@@ -19,7 +19,7 @@
  * Design ref: section 3 "UI overlay ↔ canvas state bridge".
  */
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import Link from "next/link";
 import { useSceneStore } from "../scene/useSceneStore";
 import { getAllProjects, getAllCategories } from "@/lib/content/content";
@@ -27,6 +27,128 @@ import type { Project } from "@/lib/content/types";
 import { buildCityLayout } from "../scene/cityLayout";
 import { computeFocusWaypoint } from "../scene/waypoint";
 import { MAYOR_ID } from "../scene/constants";
+
+// ─── Nav mode toggle button ───────────────────────────────────────────────────
+
+function NavModeToggle() {
+  const { navMode, toggleNavMode } = useSceneStore();
+  const isWalk = navMode === "walk";
+
+  return (
+    <button
+      type="button"
+      onClick={toggleNavMode}
+      aria-label={isWalk ? "Cambiar a vista aérea" : "Caminar por la ciudad"}
+      title={isWalk ? "Cambiar a vista aérea" : "Caminar por la ciudad (V)"}
+      className="
+        inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium
+        bg-slate-900/80 backdrop-blur-sm border border-slate-700
+        text-slate-300 hover:text-white hover:bg-slate-800/90
+        transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400
+        focus:ring-offset-2 focus:ring-offset-transparent
+      "
+    >
+      {isWalk ? (
+        <>
+          {/* Aerial view icon */}
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+          Vista aérea
+        </>
+      ) : (
+        <>
+          {/* Walk icon */}
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="4" r="2" />
+            <path d="M15 8.5L13 16l-3-3-2 5" />
+            <path d="M9 8.5l4 2.5" />
+          </svg>
+          Caminar
+        </>
+      )}
+    </button>
+  );
+}
+
+// ─── Walk controls help overlay ───────────────────────────────────────────────
+
+function WalkControlsHelp() {
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) return null;
+
+  return (
+    <div
+      role="region"
+      aria-label="Controles de caminata"
+      className="
+        absolute bottom-6 right-4 pointer-events-auto z-10
+        bg-slate-950/80 backdrop-blur-md border border-slate-700/60
+        rounded-2xl px-4 py-3 shadow-xl shadow-black/50 ring-1 ring-white/5
+        max-w-[200px] text-xs text-slate-400
+      "
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-slate-200 font-semibold text-xs">Controles</span>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label="Cerrar ayuda de controles"
+          className="text-slate-500 hover:text-white transition-colors ml-3"
+        >
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+      <ul className="space-y-1">
+        <li className="flex gap-2">
+          <kbd className="font-mono text-slate-300 bg-slate-800 px-1 rounded text-[10px]">WASD</kbd>
+          <span>Moverse</span>
+        </li>
+        <li className="flex gap-2">
+          <kbd className="font-mono text-slate-300 bg-slate-800 px-1 rounded text-[10px]">↑↓←→</kbd>
+          <span>Moverse</span>
+        </li>
+        <li className="flex gap-2">
+          <kbd className="font-mono text-slate-300 bg-slate-800 px-1 rounded text-[10px]">E</kbd>
+          <span>Ver proyecto</span>
+        </li>
+        <li className="flex gap-2">
+          <kbd className="font-mono text-slate-300 bg-slate-800 px-1 rounded text-[10px]">V</kbd>
+          <span>Vista aérea</span>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+// ─── Proximity interaction hint ───────────────────────────────────────────────
+
+function ProximityHint() {
+  const proximityBuildingId = useSceneStore((s) => s.proximityBuildingId);
+  if (!proximityBuildingId) return null;
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Presiona E para ver el proyecto"
+      className="
+        absolute bottom-24 left-1/2 -translate-x-1/2
+        bg-slate-950/85 backdrop-blur-md border border-cyan-700/60
+        rounded-xl px-4 py-2.5 shadow-lg shadow-cyan-900/30
+        text-cyan-300 text-sm font-medium pointer-events-none z-10
+        animate-pulse
+      "
+    >
+      Presiona <kbd className="font-mono bg-slate-800 text-white px-1.5 py-0.5 rounded text-xs mx-1">E</kbd> para ver el proyecto
+    </div>
+  );
+}
 
 // ─── Day/night toggle button ──────────────────────────────────────────────────
 
@@ -285,13 +407,14 @@ function BuildingNavList({ projects, selectedId, onSelect }: NavListProps) {
 // ─── HudOverlay root ──────────────────────────────────────────────────────────
 
 export function HudOverlay() {
-  const { selectedBuildingId, clearSelection, selectBuilding, phase } = useSceneStore();
+  const { selectedBuildingId, clearSelection, selectBuilding, phase, navMode } = useSceneStore();
+  const isWalk = navMode === "walk";
 
   const projects = getAllProjects();
 
   const districts = buildCityLayout(projects, getAllCategories());
 
-  // ESC key returns to overview.
+  // ESC key returns to overview. V key toggles nav mode.
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape" && selectedBuildingId) {
@@ -342,6 +465,7 @@ export function HudOverlay() {
     >
       {/* ── Top-right controls ───────────────────────────────────────────── */}
       <div className="absolute top-4 right-4 pointer-events-auto z-10 flex items-center gap-2">
+        <NavModeToggle />
         <DayNightToggle />
         <Link
           href="/classic"
@@ -374,6 +498,12 @@ export function HudOverlay() {
       {isMayorSelected && (
         <MayorPanel onClose={clearSelection} />
       )}
+
+      {/* ── Proximity hint (walk mode only) ──────────────────────────────── */}
+      {isWalk && <ProximityHint />}
+
+      {/* ── Walk controls help (walk mode only, dismissible) ─────────────── */}
+      {isWalk && <WalkControlsHelp />}
 
       {/* ── Phase indicator (loading state) ──────────────────────────────── */}
       {phase === "loading" && (
